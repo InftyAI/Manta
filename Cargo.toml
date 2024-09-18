@@ -1,0 +1,8 @@
+[package]
+name = "manta"
+version = "0.0.0"
+edition = "2021"
+description = "A simplified P2P-based cache system for model distributions."
+license = "Apache-2.0"
+
+[dependencies]
