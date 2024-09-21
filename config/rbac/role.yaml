@@ -1,0 +1,38 @@
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: manager-role
+rules:
+- apiGroups:
+  - manta.io
+  resources:
+  - nodetrackers
+  - replications
+  - torrents
+  verbs:
+  - create
+  - delete
+  - get
+  - list
+  - patch
+  - update
+  - watch
+- apiGroups:
+  - manta.io
+  resources:
+  - nodetrackers/finalizers
+  - replications/finalizers
+  - torrents/finalizers
+  verbs:
+  - update
+- apiGroups:
+  - manta.io
+  resources:
+  - nodetrackers/status
+  - replications/status
+  - torrents/status
+  verbs:
+  - get
+  - patch
+  - update

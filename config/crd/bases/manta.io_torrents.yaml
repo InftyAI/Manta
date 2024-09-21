@@ -1,0 +1,167 @@
+---
+apiVersion: apiextensions.k8s.io/v1
+kind: CustomResourceDefinition
+metadata:
+  annotations:
+    controller-gen.kubebuilder.io/version: v0.16.1
+  name: torrents.manta.io
+spec:
+  group: manta.io
+  names:
+    kind: Torrent
+    listKind: TorrentList
+    plural: torrents
+    singular: torrent
+  scope: Cluster
+  versions:
+  - name: v1alpha1
+    schema:
+      openAPIV3Schema:
+        description: Torrent is the Schema for the torrents API
+        properties:
+          apiVersion:
+            description: |-
+              APIVersion defines the versioned schema of this representation of an object.
+              Servers should convert recognized schemas to the latest internal value, and
+              may reject unrecognized values.
+              More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#resources
+            type: string
+          kind:
+            description: |-
+              Kind is a string value representing the REST resource this object represents.
+              Servers may infer this from the endpoint the client submits requests to.
+              Cannot be updated.
+              In CamelCase.
+              More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#types-kinds
+            type: string
+          metadata:
+            type: object
+          spec:
+            description: TorrentSpec defines the desired state of Torrent
+            properties:
+              modelHub:
+                description: |-
+                  ModelHub represents the model registry for model downloads.
+                  ModelHub and URI are exclusive.
+                properties:
+                  filename:
+                    description: |-
+                      Filename refers to a specified model file rather than the whole repo.
+                      This is helpful to download a specified GGUF model rather than downloading
+                      the whole repo which includes all kinds of quantized models.
+                      in the near future.
+                    type: string
+                  modelID:
+                    description: |-
+                      ModelID refers to the model identifier on model hub,
+                      such as meta-llama/Meta-Llama-3-8B.
+                    type: string
+                  name:
+                    default: Huggingface
+                    description: Name refers to the model registry, such as huggingface.
+                    enum:
+                    - Huggingface
+                    - ModelScope
+                    type: string
+                  revision:
+                    description: |-
+                      Revision refers to a Git revision id which can be a branch name, a tag, or a commit hash.
+                      Most of the time, you don't need to specify it.
+                    type: string
+                required:
+                - modelID
+                type: object
+              replicas:
+                default: 1
+                description: Replicas represents the replication number of each file.
+                format: int32
+                type: integer
+            type: object
+          status:
+            description: TorrentStatus defines the observed state of Torrent
+            properties:
+              conditions:
+                description: Conditions represents the Torrent condition.
+                items:
+                  description: Condition contains details for one aspect of the current
+                    state of this API Resource.
+                  properties:
+                    lastTransitionTime:
+                      description: |-
+                        lastTransitionTime is the last time the condition transitioned from one status to another.
+                        This should be when the underlying condition changed.  If that is not known, then using the time when the API field changed is acceptable.
+                      format: date-time
+                      type: string
+                    message:
+                      description: |-
+                        message is a human readable message indicating details about the transition.
+                        This may be an empty string.
+                      maxLength: 32768
+                      type: string
+                    observedGeneration:
+                      description: |-
+                        observedGeneration represents the .metadata.generation that the condition was set based upon.
+                        For instance, if .metadata.generation is currently 12, but the .status.conditions[x].observedGeneration is 9, the condition is out of date
+                        with respect to the current state of the instance.
+                      format: int64
+                      minimum: 0
+                      type: integer
+                    reason:
+                      description: |-
+                        reason contains a programmatic identifier indicating the reason for the condition's last transition.
+                        Producers of specific condition types may define expected values and meanings for this field,
+                        and whether the values are considered a guaranteed API.
+                        The value should be a CamelCase string.
+                        This field may not be empty.
+                      maxLength: 1024
+                      minLength: 1
+                      pattern: ^[A-Za-z]([A-Za-z0-9_,:]*[A-Za-z0-9_])?$
+                      type: string
+                    status:
+                      description: status of the condition, one of True, False, Unknown.
+                      enum:
+                      - "True"
+                      - "False"
+                      - Unknown
+                      type: string
+                    type:
+                      description: type of condition in CamelCase or in foo.example.com/CamelCase.
+                      maxLength: 316
+                      pattern: ^([a-z0-9]([-a-z0-9]*[a-z0-9])?(\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*/)?(([A-Za-z0-9][-A-Za-z0-9_.]*)?[A-Za-z0-9])$
+                      type: string
+                  required:
+                  - lastTransitionTime
+                  - message
+                  - reason
+                  - status
+                  - type
+                  type: object
+                type: array
+              files:
+                description: Files tracks the files belong to the source.
+                items:
+                  properties:
+                    State:
+                      description: |-
+                        State represents the state of the file, whether Pending
+                        for download or downloaded ready.
+                      type: string
+                    name:
+                      description: Name represents the name of the file.
+                      type: string
+                    sizeBytes:
+                      description: SizeBytes represents the file size.
+                      format: int64
+                      type: integer
+                  required:
+                  - State
+                  - name
+                  - sizeBytes
+                  type: object
+                type: array
+            type: object
+        type: object
+    served: true
+    storage: true
+    subresources:
+      status: {}

@@ -1,0 +1,12 @@
+apiVersion: manta.io/v1alpha1
+kind: NodeTracker
+metadata:
+  labels:
+    app.kubernetes.io/name: nodetracker
+    app.kubernetes.io/instance: nodetracker-sample
+    app.kubernetes.io/part-of: controller
+    app.kubernetes.io/managed-by: kustomize
+    app.kubernetes.io/created-by: controller
+  name: nodetracker-sample
+spec:
+  # TODO(user): Add fields here
