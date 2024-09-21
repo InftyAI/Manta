@@ -31,6 +31,8 @@ __pycache__
 *.pyc
 .pytest_cache
 *.tgz
+tmp
+bin
 
 # Added by cargo
 

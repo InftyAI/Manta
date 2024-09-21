@@ -1,0 +1,12 @@
+apiVersion: manta.io/v1alpha1
+kind: Replication
+metadata:
+  labels:
+    app.kubernetes.io/name: replication
+    app.kubernetes.io/instance: replication-sample
+    app.kubernetes.io/part-of: controller
+    app.kubernetes.io/managed-by: kustomize
+    app.kubernetes.io/created-by: controller
+  name: replication-sample
+spec:
+  # TODO(user): Add fields here

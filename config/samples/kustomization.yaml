@@ -1,0 +1,6 @@
+## Append samples of your project ##
+resources:
+- _v1alpha1_replication.yaml
+- _v1alpha1_nodetracker.yaml
+- _v1alpha1_torrent.yaml
+#+kubebuilder:scaffold:manifestskustomizesamples

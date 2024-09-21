@@ -1,0 +1,27 @@
+# permissions for end users to view nodetrackers.
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  labels:
+    app.kubernetes.io/name: clusterrole
+    app.kubernetes.io/instance: nodetracker-viewer-role
+    app.kubernetes.io/component: rbac
+    app.kubernetes.io/created-by: controller
+    app.kubernetes.io/part-of: controller
+    app.kubernetes.io/managed-by: kustomize
+  name: nodetracker-viewer-role
+rules:
+- apiGroups:
+  - inftyai.com
+  resources:
+  - nodetrackers
+  verbs:
+  - get
+  - list
+  - watch
+- apiGroups:
+  - inftyai.com
+  resources:
+  - nodetrackers/status
+  verbs:
+  - get
