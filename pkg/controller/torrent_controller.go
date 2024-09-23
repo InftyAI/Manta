@@ -21,31 +21,35 @@ import (
 
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
+	"k8s.io/client-go/tools/record"
 	"k8s.io/klog/v2"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/log"
 
 	api "github.com/inftyai/manta/api/v1alpha1"
+	"github.com/inftyai/manta/pkg/util"
 )
 
 // TorrentReconciler reconciles a Torrent object
 type TorrentReconciler struct {
 	client.Client
 	Scheme *runtime.Scheme
+	Record record.EventRecorder
+}
+
+func NewTorrentReconciler(client client.Client, scheme *runtime.Scheme, record record.EventRecorder) *TorrentReconciler {
+	return &TorrentReconciler{
+		Client: client,
+		Scheme: scheme,
+		Record: record,
+	}
 }
 
 //+kubebuilder:rbac:groups=manta.io,resources=torrents,verbs=get;list;watch;create;update;patch;delete
 //+kubebuilder:rbac:groups=manta.io,resources=torrents/status,verbs=get;update;patch
 //+kubebuilder:rbac:groups=manta.io,resources=torrents/finalizers,verbs=update
 
-// Reconcile is part of the main kubernetes reconciliation loop which aims to
-// move the current state of the cluster closer to the desired state.
-// TODO(user): Modify the Reconcile function to compare the state specified by
-// the Torrent object against the actual cluster state, and then
-// perform operations to make the cluster state reflect the state specified by
-// the user.
-//
 // For more details, check Reconcile and its Result here:
 // - https://pkg.go.dev/sigs.k8s.io/controller-runtime@v0.16.3/pkg/reconcile
 func (r *TorrentReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
@@ -57,6 +61,36 @@ func (r *TorrentReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ct
 	}
 
 	logger.V(10).Info("reconcile Torrent", "Torrent", klog.KObj(torrent))
+
+	// Handle Pending status.
+	if len(torrent.Status.Files) == 0 {
+		if torrent.Spec.ModelHub.Filename != nil {
+			// Download just one file.
+			torrent.Status.Files = []api.FileTracker{
+				api.FileTracker{
+					Name:  *torrent.Spec.ModelHub.Filename,
+					State: api.PendingTrackerState,
+				},
+			}
+		} else {
+			// Download the whole repo files.
+			repoID := torrent.Spec.ModelHub.ModelID
+			// TODO: support URI and ModelScope.
+			repo, err := util.ListRepoFiles(repoID)
+			if err != nil {
+				return ctrl.Result{}, err
+			}
+			for _, sib := range repo.Siblings {
+				torrent.Status.Files = append(torrent.Status.Files,
+					api.FileTracker{
+						Name:  sib.Rfilename,
+						State: api.PendingTrackerState,
+					},
+				)
+			}
+		}
+		return ctrl.Result{}, r.Client.Status().Update(ctx, torrent)
+	}
 
 	return ctrl.Result{}, nil
 }

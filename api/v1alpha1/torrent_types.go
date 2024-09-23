@@ -23,9 +23,10 @@ import (
 // This is inspired by https://github.com/InftyAI/llmaz.
 // ModelHub represents the model registry for model downloads.
 type ModelHub struct {
+	// TODO: support ModelScope
 	// Name refers to the model registry, such as huggingface.
 	// +kubebuilder:default=Huggingface
-	// +kubebuilder:validation:Enum={Huggingface,ModelScope}
+	// +kubebuilder:validation:Enum={Huggingface}
 	// +optional
 	Name *string `json:"name,omitempty"`
 	// ModelID refers to the model identifier on model hub,
@@ -37,14 +38,25 @@ type ModelHub struct {
 	// TODO: this is only supported with Huggingface, add support for ModelScope
 	// in the near future.
 	Filename *string `json:"filename,omitempty"`
+
+	// TODO: not supported
 	// Revision refers to a Git revision id which can be a branch name, a tag, or a commit hash.
 	// Most of the time, you don't need to specify it.
 	// +optional
-	Revision *string `json:"revision,omitempty"`
+	// Revision *string `json:"revision,omitempty"`
 }
 
 // URIProtocol represents the protocol of the URI.
 type URIProtocol string
+
+type ReclaimPolicy string
+
+const (
+	// RetainReclaimPolicy represents keep the files when Torrent is deleted.
+	RetainReclaimPolicy ReclaimPolicy = "Retain"
+	// DeleteReclaimPolicy represents delete the files when Torrent is deleted.
+	DeleteReclaimPolicy ReclaimPolicy = "Delete"
+)
 
 // TorrentSpec defines the desired state of Torrent
 type TorrentSpec struct {
@@ -58,17 +70,27 @@ type TorrentSpec struct {
 	// 	- Image: img://nginx:1.14.2
 	// 	- OSS: oss://<bucket>.<endpoint>/<path-to-your-files>
 	// +optional
-	// URI *URIProtocol `json:"uriuri,omitempty"`
+	// URI *URIProtocol `json:"uri,omitempty"`
 
 	// Replicas represents the replication number of each file.
 	// +kubebuilder:default=1
 	// +optional
-	Replicas *int32 ` json:"replicas,omitempty"`
+	Replicas *int32 `json:"replicas,omitempty"`
+	// ReclaimPolicy represents how to handle the file replicas when Torrent is deleted.
+	// +kubebuilder:default=Retain
+	// +kubebuilder:validation:Enum={Retain,Delete}
+	// +optional
+	ReclaimPolicy *ReclaimPolicy `json:"reclaimPolicy,omitempty"`
+	// NodeSelector represents the node constraint to download the chunks.
+	// It can be used to download the model to one node for special case.
+	// +optional
+	NodeSelector map[string]string `json:"nodeSelector,omitempty"`
 }
 
 type TrackerState string
 
 const (
+	PendingTrackerState  TrackerState = "Pending"
 	DownloadTrackerState TrackerState = "Downloading"
 	ReadyTrackerState    TrackerState = "Ready"
 )
@@ -76,11 +98,17 @@ const (
 type FileTracker struct {
 	// Name represents the name of the file.
 	Name string `json:"name"`
-	// State represents the state of the file, whether Pending
-	// for download or downloaded ready.
+	// State represents the state of the file, whether in downloading
+	// or downloaded ready.
 	State TrackerState `json:"State"`
 	// SizeBytes represents the file size.
-	SizeBytes int64 `json:"sizeBytes"`
+	// This is only used in nodeTracker.
+	// +optional
+	SizeBytes *int64 `json:"sizeBytes,omitempty"`
+	// Path represents the absolute path of the file in the node.
+	// This is only used in nodeTracker.
+	// +optional
+	Path *string `json:"path,omitempty"`
 }
 
 const (

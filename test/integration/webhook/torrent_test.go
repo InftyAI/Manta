@@ -61,5 +61,11 @@ var _ = ginkgo.Describe("model default and validation", func() {
 			},
 			failed: true,
 		}),
+		ginkgo.Entry("unknown modelHub not supported", &testValidatingCase{
+			torrent: func() *api.Torrent {
+				return wrapper.MakeTorrent("download-qwen").ModelHub("ModelScope", "Qwen/Qwen2-7B-Instruct", "").Obj()
+			},
+			failed: true,
+		}),
 	)
 })

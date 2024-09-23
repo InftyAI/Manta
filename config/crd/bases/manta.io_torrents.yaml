@@ -61,16 +61,25 @@ spec:
                     description: Name refers to the model registry, such as huggingface.
                     enum:
                     - Huggingface
-                    - ModelScope
-                    type: string
-                  revision:
-                    description: |-
-                      Revision refers to a Git revision id which can be a branch name, a tag, or a commit hash.
-                      Most of the time, you don't need to specify it.
                     type: string
                 required:
                 - modelID
                 type: object
+              nodeSelector:
+                additionalProperties:
+                  type: string
+                description: |-
+                  NodeSelector represents the node constraint to download the chunks.
+                  It can be used to download the model to one node for special case.
+                type: object
+              reclaimPolicy:
+                default: Retain
+                description: ReclaimPolicy represents how to handle the file replicas
+                  when Torrent is deleted.
+                enum:
+                - Retain
+                - Delete
+                type: string
               replicas:
                 default: 1
                 description: Replicas represents the replication number of each file.
@@ -143,20 +152,26 @@ spec:
                   properties:
                     State:
                       description: |-
-                        State represents the state of the file, whether Pending
-                        for download or downloaded ready.
+                        State represents the state of the file, whether in downloading
+                        or downloaded ready.
                       type: string
                     name:
                       description: Name represents the name of the file.
                       type: string
+                    path:
+                      description: |-
+                        Path represents the absolute path of the file in the node.
+                        This is only used in nodeTracker.
+                      type: string
                     sizeBytes:
-                      description: SizeBytes represents the file size.
+                      description: |-
+                        SizeBytes represents the file size.
+                        This is only used in nodeTracker.
                       format: int64
                       type: integer
                   required:
                   - State
                   - name
-                  - sizeBytes
                   type: object
                 type: array
             type: object
