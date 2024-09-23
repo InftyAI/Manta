@@ -32,6 +32,7 @@ type RepoInfo struct {
 	Sha      string    `json:"sha"`
 }
 
+// TODO: support modelScope as well.
 func ListRepoFiles(repoID string) (*RepoInfo, error) {
 	url := fmt.Sprintf("https://huggingface.co/api/models/%s", repoID)
 
