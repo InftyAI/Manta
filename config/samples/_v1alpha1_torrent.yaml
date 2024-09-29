@@ -9,4 +9,8 @@ metadata:
     app.kubernetes.io/created-by: controller
   name: torrent-sample
 spec:
-  # TODO(user): Add fields here
+  modelHub:
+    modelID: Qwen/Qwen2-7B-Instruct
+    # With one file.
+    # modelID: Qwen/Qwen2-0.5B-Instruct-GGUF
+    # filename: qwen2-0_5b-instruct-q5_k_m.gguf

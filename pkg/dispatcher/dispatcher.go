@@ -15,3 +15,110 @@ limitations under the License.
 */
 
 package dispatcher
+
+import (
+	api "github.com/inftyai/manta/api/v1alpha1"
+	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+)
+
+var _ Framework = &DefaultDownloader{}
+var _ Framework = &DefaultSyncer{}
+
+type DefaultDownloader struct {
+	plugins []string
+}
+
+func (dd *DefaultDownloader) RegisterPlugins(plugins []string) {
+	dd.plugins = plugins
+}
+
+func (d *DefaultDownloader) RunFilterPlugins() {
+}
+
+func (d *DefaultDownloader) RunScorePlugins() {
+
+}
+
+type DefaultSyncer struct {
+	plugins []string
+}
+
+func (ds *DefaultSyncer) RegisterPlugins(plugins []string) {
+	ds.plugins = plugins
+}
+
+func (ds *DefaultSyncer) RunFilterPlugins() {
+}
+
+func (ds *DefaultSyncer) RunScorePlugins() {
+
+}
+
+type Dispatcher struct {
+	cache      *cache
+	downloader *DefaultDownloader
+	syncer     *DefaultSyncer
+}
+
+func NewDispatcher(downloadPlugins []string, syncPlugins []string) *Dispatcher {
+	downloader := &DefaultDownloader{}
+	downloader.RegisterPlugins(downloadPlugins)
+	syncer := &DefaultSyncer{}
+	syncer.RegisterPlugins(syncPlugins)
+
+	dispatcher := &Dispatcher{
+		downloader: downloader,
+		syncer:     syncer,
+		cache:      &cache{},
+	}
+
+	return dispatcher
+}
+
+// PrepareReplications will construct the replications needed to created and
+// update the torrent status the same time.
+func (d *Dispatcher) PrepareReplications(torrent *api.Torrent) ([]*api.Replication, bool, error) {
+	// Make sure this will not happen, just in case of panic.
+	if torrent.Status.Repo == nil {
+		return nil, false, nil
+	}
+
+	replications := []*api.Replication{}
+	var torrentStatusChanged bool
+
+	for _, obj := range torrent.Status.Repo.Objects {
+		for _, chunk := range obj.Chunks {
+			if chunk.State == api.PendingTrackerState {
+				replication := &api.Replication{
+					TypeMeta: v1.TypeMeta{
+						Kind:       "Replication",
+						APIVersion: api.GroupVersion.String(),
+					},
+					ObjectMeta: v1.ObjectMeta{
+						Name: chunk.Name,
+					},
+					Spec: api.ReplicationSpec{
+						Tuples: []api.Tuple{
+							{
+								// TODO: source could be local or remote
+								Source: api.Target{
+									ChunkName: chunk.Name,
+								},
+								Destination: &api.Target{
+									ChunkName: chunk.Name,
+								},
+							},
+						},
+					},
+				}
+
+				replications = append(replications, replication)
+
+				// Update the chunk state as well, we'll update the status later.
+				chunk.State = api.DownloadTrackerState
+				torrentStatusChanged = true
+			}
+		}
+	}
+	return replications, torrentStatusChanged, nil
+}

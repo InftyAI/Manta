@@ -24,23 +24,29 @@ import (
 // Source couldn't be nil, but if destination is nil,
 // it means to delete the file.
 type Target struct {
-	// FileName represents the target file name.
-	FileName string `json:"filename"`
-	// Path represents the location of the file in source or
-	// the location where to put the file in destination.
-	Path string `json:"path"`
+	// ChunkName represents the target chunk name.
+	ChunkName string `json:"chunkName"`
+	// TODO
 	// Address represents the communication address of the Pod.
-	Address *string `json:"Address"`
+	// +optional
+	Address *string `json:"address,omitempty"`
 }
 
-// ReplicationSpec defines the desired state of Replication
-type ReplicationSpec struct {
+// Tuple represents a pair of source and destination.
+type Tuple struct {
 	// Source represents the source file.
 	// Source couldn't be nil.
 	Source Target `json:"source"`
 	// Destination represents the destination of the file.
 	// If destination is nil, it means to delete the file.
 	Destination *Target `json:"destination,omitempty"`
+}
+
+// ReplicationSpec defines the desired state of Replication
+type ReplicationSpec struct {
+	// Tuples represents a slice of tuples.
+	// +optional
+	Tuples []Tuple `json:"tuples,omitempty"`
 }
 
 type ReplicateState string

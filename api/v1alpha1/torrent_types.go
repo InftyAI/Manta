@@ -38,12 +38,10 @@ type ModelHub struct {
 	// TODO: this is only supported with Huggingface, add support for ModelScope
 	// in the near future.
 	Filename *string `json:"filename,omitempty"`
-
-	// TODO: not supported
 	// Revision refers to a Git revision id which can be a branch name, a tag, or a commit hash.
-	// Most of the time, you don't need to specify it.
+	// +kubebuilder:default=main
 	// +optional
-	// Revision *string `json:"revision,omitempty"`
+	Revision *string `json:"revision,omitempty"`
 }
 
 // URIProtocol represents the protocol of the URI.
@@ -95,23 +93,49 @@ const (
 	ReadyTrackerState    TrackerState = "Ready"
 )
 
-type FileTracker struct {
-	// Name represents the name of the file.
+type ChunkStatus struct {
+	// Name represents the name of the chunk. It's a hashed value.
 	Name string `json:"name"`
-	// State represents the state of the file, whether in downloading
+	// State represents the state of the chunk, whether in downloading
 	// or downloaded ready.
-	State TrackerState `json:"State"`
-	// SizeBytes represents the file size.
-	// This is only used in nodeTracker.
+	State TrackerState `json:"state"`
+	// SizeBytes represents the chunk size.
+	SizeBytes int64 `json:"sizeBytes"`
+}
+
+type ObjectType string
+
+const (
+	FileObjectType      ObjectType = "file"
+	DirectoryObjectType ObjectType = "directory"
+)
+
+// ObjectStatus tracks the object info.
+type ObjectStatus struct {
+	// Path represents the path of the object.
+	Path string `json:"path"`
+	// Chunks represents the whole chunks which makes up the object.
+	Chunks []*ChunkStatus `json:"chunks,omitempty"`
+	// Type represents the object type, limits to file or directory.
+	// +kubebuilder:validation:Enum={file,directory}
+	Type ObjectType `json:"type"`
+
+	// TODO: for embedding files.
+	// Objects []ObjectStatus `json:"objects,omitempty"`
+}
+
+type RepoStatus struct {
+	// RepoName represents the repo name of the file,
+	// it could be nil once the file has no repo.
 	// +optional
-	SizeBytes *int64 `json:"sizeBytes,omitempty"`
-	// Path represents the absolute path of the file in the node.
-	// This is only used in nodeTracker.
-	// +optional
-	Path *string `json:"path,omitempty"`
+	Name *string `json:"name,omitempty"`
+	// Objects represents the whole objects belongs to the repo.
+	Objects []*ObjectStatus `json:"objects,omitempty"`
 }
 
 const (
+	// PendingConditionType represents the Torrent is Pending.
+	PendingConditionType = string(PendingTrackerState)
 	// DownloadConditionType represents the Torrent is under downloading.
 	DownloadConditionType = string(DownloadTrackerState)
 	// ReadyConditionType represents the Torrent is downloaded successfully.
@@ -122,8 +146,8 @@ const (
 type TorrentStatus struct {
 	// Conditions represents the Torrent condition.
 	Conditions []metav1.Condition `json:"conditions,omitempty"`
-	// Files tracks the files belong to the source.
-	Files []FileTracker `json:"files,omitempty"`
+	// Repo tracks the objects belong to the source.
+	Repo *RepoStatus `json:"repo,omitempty"`
 }
 
 //+kubebuilder:object:root=true

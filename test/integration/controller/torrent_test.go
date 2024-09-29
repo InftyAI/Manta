@@ -73,7 +73,7 @@ var _ = ginkgo.Describe("Torrent controller test", func() {
 						gomega.Expect(k8sClient.Create(ctx, torrent)).To(gomega.Succeed())
 					},
 					checkFunc: func(ctx context.Context, k8sClient client.Client, torrent *api.Torrent) {
-						validation.ValidateTorrentStatusEqualTo(ctx, k8sClient, torrent, string(api.DownloadConditionType), "WaitingForDownloading", metav1.ConditionTrue)
+						validation.ValidateTorrentStatusEqualTo(ctx, k8sClient, torrent, api.PendingConditionType, "Pending", metav1.ConditionTrue)
 					},
 				},
 			},
@@ -88,7 +88,7 @@ var _ = ginkgo.Describe("Torrent controller test", func() {
 						gomega.Expect(k8sClient.Create(ctx, torrent)).To(gomega.Succeed())
 					},
 					checkFunc: func(ctx context.Context, k8sClient client.Client, torrent *api.Torrent) {
-						validation.ValidateTorrentStatusEqualTo(ctx, k8sClient, torrent, string(api.DownloadConditionType), "WaitingForDownloading", metav1.ConditionTrue)
+						validation.ValidateTorrentStatusEqualTo(ctx, k8sClient, torrent, api.PendingConditionType, "Pending", metav1.ConditionTrue)
 					},
 				},
 			},

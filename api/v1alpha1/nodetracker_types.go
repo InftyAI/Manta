@@ -28,7 +28,7 @@ type NodeTrackerSpec struct {
 
 // NodeTrackerStatus defines the observed state of NodeTracker
 type NodeTrackerStatus struct {
-	Files []FileTracker `json:"files,omitempty"`
+	// Files []FileTracker `json:"files,omitempty"`
 }
 
 //+kubebuilder:object:root=true

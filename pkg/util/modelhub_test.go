@@ -22,24 +22,27 @@ import (
 
 func TestListRepoFiles(t *testing.T) {
 	testCases := []struct {
-		name    string
-		repoID  string
-		wantErr bool
+		name     string
+		repoID   string
+		revision string
+		wantErr  bool
 	}{
 		{
-			name:   "right repo",
-			repoID: "Qwen/Qwen2-7B-Instruct",
+			name:     "right repo",
+			repoID:   "Qwen/Qwen2-7B-Instruct",
+			revision: "main",
 		},
 		{
-			name:    "non-existence repo",
-			repoID:  "QQwen/Qwen2-7B-Instruct",
-			wantErr: true,
+			name:     "non-existence repo",
+			repoID:   "QQwen/Qwen2-7B-Instruct",
+			wantErr:  true,
+			revision: " main",
 		},
 	}
 
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
-			info, err := ListRepoFiles(tc.repoID)
+			objects, err := ListRepoObjects(tc.repoID, tc.revision)
 			if err != nil && !tc.wantErr {
 				t.Fatalf("unexpected err: %v", err)
 			}
@@ -48,8 +51,8 @@ func TestListRepoFiles(t *testing.T) {
 				t.Fatal("no error returned")
 			}
 
-			if err == nil && info.Sha == "" {
-				t.Fatal("empty sha")
+			if err == nil && len(objects) == 0 {
+				t.Fatal("empty objects")
 			}
 		})
 	}

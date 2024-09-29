@@ -33,7 +33,9 @@ import (
 	metricsserver "sigs.k8s.io/controller-runtime/pkg/metrics/server"
 
 	inftyaicomv1alpha1 "github.com/inftyai/manta/api/v1alpha1"
+	"github.com/inftyai/manta/pkg/cert"
 	"github.com/inftyai/manta/pkg/controller"
+	"github.com/inftyai/manta/pkg/webhook"
 	//+kubebuilder:scaffold:imports
 )
 
@@ -89,27 +91,18 @@ func main() {
 		os.Exit(1)
 	}
 
-	if err = (&controller.ReplicationReconciler{
-		Client: mgr.GetClient(),
-		Scheme: mgr.GetScheme(),
-	}).SetupWithManager(mgr); err != nil {
-		setupLog.Error(err, "unable to create controller", "controller", "Replication")
+	certsReady := make(chan struct{})
+
+	if err = cert.CertsManager(mgr, certsReady); err != nil {
+		setupLog.Error(err, "unable to setup cert rotation")
 		os.Exit(1)
 	}
-	if err = (&controller.NodeTrackerReconciler{
-		Client: mgr.GetClient(),
-		Scheme: mgr.GetScheme(),
-	}).SetupWithManager(mgr); err != nil {
-		setupLog.Error(err, "unable to create controller", "controller", "NodeTracker")
-		os.Exit(1)
-	}
-	if err = (&controller.TorrentReconciler{
-		Client: mgr.GetClient(),
-		Scheme: mgr.GetScheme(),
-	}).SetupWithManager(mgr); err != nil {
-		setupLog.Error(err, "unable to create controller", "controller", "Torrent")
-		os.Exit(1)
-	}
+
+	// Cert won't be ready until manager starts, so start a goroutine here which
+	// will block until the cert is ready before setting up the controllers.
+	// Controllers who register after manager starts will start directly.
+	go setupControllers(mgr, certsReady)
+
 	//+kubebuilder:scaffold:builder
 
 	if err := mgr.AddHealthzCheck("healthz", healthz.Ping); err != nil {
@@ -125,5 +118,42 @@ func main() {
 	if err := mgr.Start(ctrl.SetupSignalHandler()); err != nil {
 		setupLog.Error(err, "problem running manager")
 		os.Exit(1)
+	}
+}
+
+func setupControllers(mgr ctrl.Manager, certsReady chan struct{}) {
+	// The controllers won't work until the webhooks are operating,
+	// and the webhook won't work until the certs are all in places.
+	setupLog.Info("waiting for the cert generation to complete")
+	<-certsReady
+	setupLog.Info("certs ready")
+
+	if err := (&controller.ReplicationReconciler{
+		Client: mgr.GetClient(),
+		Scheme: mgr.GetScheme(),
+	}).SetupWithManager(mgr); err != nil {
+		setupLog.Error(err, "unable to create controller", "controller", "Replication")
+		os.Exit(1)
+	}
+	if err := (&controller.NodeTrackerReconciler{
+		Client: mgr.GetClient(),
+		Scheme: mgr.GetScheme(),
+	}).SetupWithManager(mgr); err != nil {
+		setupLog.Error(err, "unable to create controller", "controller", "NodeTracker")
+		os.Exit(1)
+	}
+	if err := (&controller.TorrentReconciler{
+		Client: mgr.GetClient(),
+		Scheme: mgr.GetScheme(),
+	}).SetupWithManager(mgr); err != nil {
+		setupLog.Error(err, "unable to create controller", "controller", "Torrent")
+		os.Exit(1)
+	}
+
+	if os.Getenv("ENABLE_WEBHOOKS") != "false" {
+		if err := webhook.SetupTorrentWebhook(mgr); err != nil {
+			setupLog.Error(err, "unable to create webhook", "webhook", "Torrent")
+			os.Exit(1)
+		}
 	}
 }

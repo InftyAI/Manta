@@ -23,24 +23,24 @@ import (
 	"net/http"
 )
 
-type Sibling struct {
-	Rfilename string `json:"rfilename"`
-}
-
-type RepoInfo struct {
-	Siblings []Sibling `json:"siblings"`
-	Sha      string    `json:"sha"`
+type ObjectBody struct {
+	Path string `json:"path"`
+	Type string `json:"type"`
+	Oid  string `json:"oid"`
+	Size int64  `json:"size"`
 }
 
 // TODO: support modelScope as well.
-func ListRepoFiles(repoID string) (*RepoInfo, error) {
-	url := fmt.Sprintf("https://huggingface.co/api/models/%s", repoID)
+func ListRepoObjects(repoID string, revision string) (bodies []*ObjectBody, err error) {
+	url := fmt.Sprintf("https://huggingface.co/api/models/%s/tree/%s", repoID, revision)
 
 	resp, err := http.Get(url)
 	if err != nil {
 		return nil, err
 	}
-	defer resp.Body.Close()
+	defer func() {
+		_ = resp.Body.Close()
+	}()
 
 	if resp.StatusCode != http.StatusOK {
 		return nil, fmt.Errorf("failed to get repo files: status code %d", resp.StatusCode)
@@ -51,10 +51,10 @@ func ListRepoFiles(repoID string) (*RepoInfo, error) {
 		return nil, err
 	}
 
-	var info RepoInfo
+	info := []*ObjectBody{}
 	if err := json.Unmarshal(body, &info); err != nil {
 		return nil, err
 	}
 
-	return &info, nil
+	return info, nil
 }
