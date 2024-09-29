@@ -39,52 +39,45 @@ spec:
           spec:
             description: ReplicationSpec defines the desired state of Replication
             properties:
-              destination:
-                description: |-
-                  Destination represents the destination of the file.
-                  If destination is nil, it means to delete the file.
-                properties:
-                  Address:
-                    description: Address represents the communication address of the
-                      Pod.
-                    type: string
-                  filename:
-                    description: FileName represents the target file name.
-                    type: string
-                  path:
-                    description: |-
-                      Path represents the location of the file in source or
-                      the location where to put the file in destination.
-                    type: string
-                required:
-                - Address
-                - filename
-                - path
-                type: object
-              source:
-                description: |-
-                  Source represents the source file.
-                  Source couldn't be nil.
-                properties:
-                  Address:
-                    description: Address represents the communication address of the
-                      Pod.
-                    type: string
-                  filename:
-                    description: FileName represents the target file name.
-                    type: string
-                  path:
-                    description: |-
-                      Path represents the location of the file in source or
-                      the location where to put the file in destination.
-                    type: string
-                required:
-                - Address
-                - filename
-                - path
-                type: object
-            required:
-            - source
+              tuples:
+                description: Tuples represents a slice of tuples.
+                items:
+                  description: Tuple represents a pair of source and destination.
+                  properties:
+                    destination:
+                      description: |-
+                        Destination represents the destination of the file.
+                        If destination is nil, it means to delete the file.
+                      properties:
+                        address:
+                          description: Address represents the communication address
+                            of the Pod.
+                          type: string
+                        chunkName:
+                          description: ChunkName represents the target chunk name.
+                          type: string
+                      required:
+                      - chunkName
+                      type: object
+                    source:
+                      description: |-
+                        Source represents the source file.
+                        Source couldn't be nil.
+                      properties:
+                        address:
+                          description: Address represents the communication address
+                            of the Pod.
+                          type: string
+                        chunkName:
+                          description: ChunkName represents the target chunk name.
+                          type: string
+                      required:
+                      - chunkName
+                      type: object
+                  required:
+                  - source
+                  type: object
+                type: array
             type: object
           status:
             description: ReplicationStatus defines the observed state of Replication

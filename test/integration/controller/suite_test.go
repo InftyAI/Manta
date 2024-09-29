@@ -39,6 +39,7 @@ import (
 
 	api "github.com/inftyai/manta/api/v1alpha1"
 	controller "github.com/inftyai/manta/pkg/controller"
+	"github.com/inftyai/manta/pkg/dispatcher"
 )
 
 // These tests use Ginkgo (BDD-style Go testing framework). Refer to
@@ -101,7 +102,7 @@ var _ = BeforeSuite(func() {
 	})
 	Expect(err).ToNot(HaveOccurred())
 
-	torrentController := controller.NewTorrentReconciler(mgr.GetClient(), mgr.GetScheme(), mgr.GetEventRecorderFor("torrent"))
+	torrentController := controller.NewTorrentReconciler(mgr.GetClient(), mgr.GetScheme(), mgr.GetEventRecorderFor("torrent"), dispatcher.NewDispatcher([]string{}, []string{}))
 	Expect(torrentController.SetupWithManager(mgr)).NotTo(HaveOccurred())
 
 	go func() {

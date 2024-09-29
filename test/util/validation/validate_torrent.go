@@ -22,8 +22,9 @@ import (
 	"fmt"
 
 	"github.com/onsi/gomega"
+	"github.com/onsi/gomega/format"
 
-	// apimeta "k8s.io/apimachinery/pkg/api/meta"
+	apimeta "k8s.io/apimachinery/pkg/api/meta"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -38,23 +39,23 @@ func ValidateTorrentStatusEqualTo(ctx context.Context, k8sClient client.Client, 
 			return errors.New("failed to get torrent")
 		}
 
-		// if condition := apimeta.FindStatusCondition(torrent.Status.Conditions, conditionType); condition == nil {
-		// 	return fmt.Errorf("condition not found: %s", format.Object(torrent, 1))
-		// } else {
-		// 	if condition.Reason != reason || condition.Status != status {
-		// 		return fmt.Errorf("expected reason %q or status %q, but got %s", reason, status, format.Object(condition, 1))
-		// 	}
-		// }
+		if condition := apimeta.FindStatusCondition(torrent.Status.Conditions, conditionType); condition == nil {
+			return fmt.Errorf("condition not found: %s", format.Object(torrent, 1))
+		} else {
+			if condition.Reason != reason || condition.Status != status {
+				return fmt.Errorf("expected reason %q or status %q, but got %s", reason, status, format.Object(condition, 1))
+			}
+		}
 
 		if torrent.Spec.ModelHub != nil && torrent.Spec.ModelHub.Filename != nil {
-			if len(torrent.Status.Files) != 1 {
-				return fmt.Errorf("unexpected file length, expected 1 got %d", len(torrent.Status.Files))
+			if torrent.Status.Repo == nil || len(torrent.Status.Repo.Objects) != 1 {
+				return fmt.Errorf("unexpected object length, should be equal to 1")
 			}
 		}
 
 		if torrent.Spec.ModelHub != nil && torrent.Spec.ModelHub.Filename == nil {
-			if len(torrent.Status.Files) <= 1 {
-				return fmt.Errorf("unexpected file length, expected greater than 1, got %d", len(torrent.Status.Files))
+			if torrent.Status.Repo == nil || len(torrent.Status.Repo.Objects) <= 1 {
+				return fmt.Errorf("unexpected file length, should be greater than 1")
 			}
 		}
 
