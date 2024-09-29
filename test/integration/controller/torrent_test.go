@@ -74,6 +74,7 @@ var _ = ginkgo.Describe("Torrent controller test", func() {
 					},
 					checkFunc: func(ctx context.Context, k8sClient client.Client, torrent *api.Torrent) {
 						validation.ValidateTorrentStatusEqualTo(ctx, k8sClient, torrent, api.PendingConditionType, "Pending", metav1.ConditionTrue)
+						validation.ValidateTorrentStatusEqualTo(ctx, k8sClient, torrent, api.DownloadConditionType, "Downloading", metav1.ConditionTrue)
 					},
 				},
 			},
@@ -89,6 +90,23 @@ var _ = ginkgo.Describe("Torrent controller test", func() {
 					},
 					checkFunc: func(ctx context.Context, k8sClient client.Client, torrent *api.Torrent) {
 						validation.ValidateTorrentStatusEqualTo(ctx, k8sClient, torrent, api.PendingConditionType, "Pending", metav1.ConditionTrue)
+						validation.ValidateTorrentStatusEqualTo(ctx, k8sClient, torrent, api.DownloadConditionType, "Downloading", metav1.ConditionTrue)
+					},
+				},
+			},
+		}),
+		ginkgo.Entry("Torrent with multi Replicas create", &testValidatingCase{
+			makeTorrent: func() *api.Torrent {
+				return wrapper.MakeTorrent("qwen2-7b").Replicas(3).ModelHub("Huggingface", "Qwen/Qwen2-7B-Instruct", "").Obj()
+			},
+			updates: []*update{
+				{
+					updateFunc: func(torrent *api.Torrent) {
+						gomega.Expect(k8sClient.Create(ctx, torrent)).To(gomega.Succeed())
+					},
+					checkFunc: func(ctx context.Context, k8sClient client.Client, torrent *api.Torrent) {
+						validation.ValidateTorrentStatusEqualTo(ctx, k8sClient, torrent, api.PendingConditionType, "Pending", metav1.ConditionTrue)
+						validation.ValidateTorrentStatusEqualTo(ctx, k8sClient, torrent, api.DownloadConditionType, "Downloading", metav1.ConditionTrue)
 					},
 				},
 			},

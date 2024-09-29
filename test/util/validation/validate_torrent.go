@@ -26,6 +26,7 @@ import (
 
 	apimeta "k8s.io/apimachinery/pkg/api/meta"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
@@ -57,6 +58,19 @@ func ValidateTorrentStatusEqualTo(ctx context.Context, k8sClient client.Client, 
 			if torrent.Status.Repo == nil || len(torrent.Status.Repo.Objects) <= 1 {
 				return fmt.Errorf("unexpected file length, should be greater than 1")
 			}
+		}
+
+		replications := api.ReplicationList{}
+		selector := labels.SelectorFromSet(labels.Set{api.TorrentNameLabelKey: torrent.Name})
+		if err := k8sClient.List(ctx, &replications, &client.ListOptions{
+			LabelSelector: selector,
+		}); err != nil {
+			return err
+		}
+
+		// TODO: refactor this part once we support multi-chunks per file.
+		if len(torrent.Status.Repo.Objects)*int(*torrent.Spec.Replicas) != len(replications.Items) {
+			return errors.New("unexpected Replication number")
 		}
 
 		return nil

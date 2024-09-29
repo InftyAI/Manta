@@ -24,8 +24,6 @@ import (
 // Source couldn't be nil, but if destination is nil,
 // it means to delete the file.
 type Target struct {
-	// ChunkName represents the target chunk name.
-	ChunkName string `json:"chunkName"`
 	// TODO
 	// Address represents the communication address of the Pod.
 	// +optional
@@ -44,6 +42,15 @@ type Tuple struct {
 
 // ReplicationSpec defines the desired state of Replication
 type ReplicationSpec struct {
+	// NodeName represents which node should do replication.
+	NodeName string `json:"nodeName"`
+	// RepoName represents the repo name.
+	// +optional
+	RepoName *string `json:"repoName,omitempty"`
+	// ObjectPath represents the object path.
+	ObjectPath string `json:"objectPath"`
+	// ChunkName represents the target chunk name.
+	ChunkName string `json:"chunkName"`
 	// Tuples represents a slice of tuples.
 	// +optional
 	Tuples []Tuple `json:"tuples,omitempty"`

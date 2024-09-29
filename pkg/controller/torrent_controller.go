@@ -18,6 +18,7 @@ package controller
 
 import (
 	"context"
+	"fmt"
 	"strings"
 
 	"k8s.io/apimachinery/pkg/api/errors"
@@ -56,51 +57,6 @@ func NewTorrentReconciler(client client.Client, scheme *runtime.Scheme, record r
 
 func repoName(modelID string) string {
 	return "models--" + strings.ReplaceAll(modelID, "/", "--")
-}
-
-// We have one chunk for one file for now.
-func constructRepoOfStatus(torrent *api.Torrent, objects []*util.ObjectBody) {
-	repo := &api.RepoStatus{}
-
-	if torrent.Spec.ModelHub.Filename != nil {
-		for _, obj := range objects {
-			if obj.Path == *torrent.Spec.ModelHub.Filename {
-				repo.Objects = []*api.ObjectStatus{
-					{
-						Path: obj.Path,
-						Type: api.ObjectType(obj.Type),
-						Chunks: []*api.ChunkStatus{
-							{
-								// Each file only has one chunk right now.
-								Name:      obj.Oid + "--0001",
-								State:     api.PendingTrackerState,
-								SizeBytes: obj.Size,
-							},
-						},
-					},
-				}
-				break
-			}
-		}
-	} else {
-		repoName := repoName(torrent.Spec.ModelHub.ModelID)
-		repo.Name = &repoName
-		for _, obj := range objects {
-			repo.Objects = append(repo.Objects, &api.ObjectStatus{
-				Path: obj.Path,
-				Type: api.ObjectType(obj.Type),
-				Chunks: []*api.ChunkStatus{
-					{
-						// Each file only has one chunk right now.
-						Name:      obj.Oid + "--0001",
-						State:     api.PendingTrackerState,
-						SizeBytes: obj.Size,
-					},
-				},
-			})
-		}
-	}
-	torrent.Status.Repo = repo
 }
 
 //+kubebuilder:rbac:groups=manta.io,resources=torrents,verbs=get;list;watch;create;update;patch;delete
@@ -230,4 +186,49 @@ func torrentReady(torrent *api.Torrent) bool {
 		}
 	}
 	return true
+}
+
+// We have one chunk for one file for now.
+func constructRepoOfStatus(torrent *api.Torrent, objects []*util.ObjectBody) {
+	repo := &api.RepoStatus{}
+
+	if torrent.Spec.ModelHub.Filename != nil {
+		for _, obj := range objects {
+			if obj.Path == *torrent.Spec.ModelHub.Filename {
+				chunks := []*api.ChunkStatus{}
+				chunks = append(chunks, &api.ChunkStatus{
+					// TODO: Each file only has one chunk for now.
+					Name:      fmt.Sprintf("%s--0001", obj.Oid),
+					State:     api.PendingTrackerState,
+					SizeBytes: obj.Size,
+				})
+				repo.Objects = []*api.ObjectStatus{
+					{
+						Path:   obj.Path,
+						Type:   api.ObjectType(obj.Type),
+						Chunks: chunks,
+					},
+				}
+				break
+			}
+		}
+	} else {
+		repoName := repoName(torrent.Spec.ModelHub.ModelID)
+		repo.Name = &repoName
+		for _, obj := range objects {
+			chunks := []*api.ChunkStatus{}
+			chunks = append(chunks, &api.ChunkStatus{
+				// TODO: Each file only has one chunk for now.
+				Name:      fmt.Sprintf("%s--0001", obj.Oid),
+				State:     api.PendingTrackerState,
+				SizeBytes: obj.Size,
+			})
+			repo.Objects = append(repo.Objects, &api.ObjectStatus{
+				Path:   obj.Path,
+				Type:   api.ObjectType(obj.Type),
+				Chunks: chunks,
+			})
+		}
+	}
+	torrent.Status.Repo = repo
 }
