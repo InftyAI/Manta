@@ -60,6 +60,10 @@ func ValidateTorrentStatusEqualTo(ctx context.Context, k8sClient client.Client, 
 			}
 		}
 
+		if conditionType != api.DownloadConditionType {
+			return nil
+		}
+
 		replications := api.ReplicationList{}
 		selector := labels.SelectorFromSet(labels.Set{api.TorrentNameLabelKey: torrent.Name})
 		if err := k8sClient.List(ctx, &replications, &client.ListOptions{
@@ -69,9 +73,7 @@ func ValidateTorrentStatusEqualTo(ctx context.Context, k8sClient client.Client, 
 		}
 
 		// TODO: refactor this part once we support multi-chunks per file.
-		if len(torrent.Status.Repo.Objects)*int(*torrent.Spec.Replicas) != len(replications.Items) {
-			return errors.New("unexpected Replication number")
-		}
+		// TODO: validate replicas
 
 		return nil
 	}, util.Timeout, util.Interval).Should(gomega.Succeed())

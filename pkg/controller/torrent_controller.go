@@ -19,7 +19,6 @@ package controller
 import (
 	"context"
 	"fmt"
-	"strings"
 
 	"k8s.io/apimachinery/pkg/api/errors"
 	apimeta "k8s.io/apimachinery/pkg/api/meta"
@@ -55,10 +54,6 @@ func NewTorrentReconciler(client client.Client, scheme *runtime.Scheme, record r
 	}
 }
 
-func repoName(modelID string) string {
-	return "models--" + strings.ReplaceAll(modelID, "/", "--")
-}
-
 //+kubebuilder:rbac:groups=manta.io,resources=torrents,verbs=get;list;watch;create;update;patch;delete
 //+kubebuilder:rbac:groups=manta.io,resources=torrents/status,verbs=get;update;patch
 //+kubebuilder:rbac:groups=manta.io,resources=torrents/finalizers,verbs=update
@@ -77,7 +72,7 @@ func (r *TorrentReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ct
 
 	// Handle Pending status.
 	if torrent.Status.Repo == nil {
-		_ = setCondition(torrent)
+		_ = setTorrentCondition(torrent)
 
 		// TODO: We only support modelHub right now, we need to support spec.URI in the future as well.
 		objects, err := util.ListRepoObjects(torrent.Spec.ModelHub.ModelID, *torrent.Spec.ModelHub.Revision)
@@ -104,7 +99,7 @@ func (r *TorrentReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ct
 		}
 	}
 
-	conditionChanged := setCondition(torrent)
+	conditionChanged := setTorrentCondition(torrent)
 	if torrentStatusChanged || conditionChanged {
 		return ctrl.Result{}, r.Status().Update(ctx, torrent)
 	}
@@ -143,7 +138,7 @@ func (r *TorrentReconciler) SetupWithManager(mgr ctrl.Manager) error {
 		Complete(r)
 }
 
-func setCondition(torrent *api.Torrent) (changed bool) {
+func setTorrentCondition(torrent *api.Torrent) (changed bool) {
 	if torrent.Status.Repo == nil {
 		condition := metav1.Condition{
 			Type:    api.PendingConditionType,
@@ -193,6 +188,8 @@ func constructRepoOfStatus(torrent *api.Torrent, objects []*util.ObjectBody) {
 	repo := &api.RepoStatus{}
 
 	if torrent.Spec.ModelHub.Filename != nil {
+		// The repo could contain multiple objects(files) in the same directory, but
+		// we only need one file.
 		for _, obj := range objects {
 			if obj.Path == *torrent.Spec.ModelHub.Filename {
 				chunks := []*api.ChunkStatus{}
@@ -213,8 +210,6 @@ func constructRepoOfStatus(torrent *api.Torrent, objects []*util.ObjectBody) {
 			}
 		}
 	} else {
-		repoName := repoName(torrent.Spec.ModelHub.ModelID)
-		repo.Name = &repoName
 		for _, obj := range objects {
 			chunks := []*api.ChunkStatus{}
 			chunks = append(chunks, &api.ChunkStatus{

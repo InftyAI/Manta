@@ -21,7 +21,9 @@ import (
 )
 
 const (
-	TorrentNameLabelKey = "manta.io/torrent-name"
+	TorrentNameLabelKey   = "manta.io/torrent-name"
+	DefaultWorkspace      = "/workspace/models/"
+	HUGGINGFACE_MODEL_HUB = "Huggingface"
 )
 
 // This is inspired by https://github.com/InftyAI/llmaz.
@@ -75,6 +77,7 @@ type TorrentSpec struct {
 	// URI *URIProtocol `json:"uri,omitempty"`
 
 	// Replicas represents the replication number of each object.
+	// The real Replicas number could be greater than the desired Replicas.
 	// +kubebuilder:default=1
 	// +kubebuilder:validation:Maximum=99
 	// +optional
@@ -100,11 +103,10 @@ const (
 
 type ChunkStatus struct {
 	// Name represents the name of the chunk.
-	// The chunk name is formatted as: <object hash>--<chunk number>--<replica number>,
-	// e.g. "945c19bff66ba533eb2032a33dcc6281c4a1e032--0210--02", which means:
+	// The chunk name is formatted as: <object hash>--<chunk number>,
+	// e.g. "945c19bff66ba533eb2032a33dcc6281c4a1e032--0210", which means:
 	// - the object hash is 945c19bff66ba533eb2032a33dcc6281c4a1e032
 	// - the chunk is the second chunk of the total 10 chunks
-	// - the replica number 2 means the object has at least 3 replicas
 	Name string `json:"name"`
 	// State represents the state of the chunk, whether in downloading
 	// or downloaded ready.
@@ -130,16 +132,9 @@ type ObjectStatus struct {
 	// Type represents the object type, limits to file or directory.
 	// +kubebuilder:validation:Enum={file,directory}
 	Type ObjectType `json:"type"`
-
-	// TODO: for embedding files.
-	// Objects []ObjectStatus `json:"objects,omitempty"`
 }
 
 type RepoStatus struct {
-	// RepoName represents the repo name of the file,
-	// it could be nil once the file has no repo.
-	// +optional
-	Name *string `json:"name,omitempty"`
 	// Objects represents the whole objects belongs to the repo.
 	Objects []*ObjectStatus `json:"objects,omitempty"`
 }

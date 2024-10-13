@@ -87,7 +87,9 @@ spec:
                 type: string
               replicas:
                 default: 1
-                description: Replicas represents the replication number of each object.
+                description: |-
+                  Replicas represents the replication number of each object.
+                  The real Replicas number could be greater than the desired Replicas.
                 format: int32
                 maximum: 99
                 type: integer
@@ -155,11 +157,6 @@ spec:
               repo:
                 description: Repo tracks the objects belong to the source.
                 properties:
-                  name:
-                    description: |-
-                      RepoName represents the repo name of the file,
-                      it could be nil once the file has no repo.
-                    type: string
                   objects:
                     description: Objects represents the whole objects belongs to the
                       repo.
@@ -174,11 +171,10 @@ spec:
                               name:
                                 description: |-
                                   Name represents the name of the chunk.
-                                  The chunk name is formatted as: <object hash>--<chunk number>--<replica number>,
-                                  e.g. "945c19bff66ba533eb2032a33dcc6281c4a1e032--0210--02", which means:
+                                  The chunk name is formatted as: <object hash>--<chunk number>,
+                                  e.g. "945c19bff66ba533eb2032a33dcc6281c4a1e032--0210", which means:
                                   - the object hash is 945c19bff66ba533eb2032a33dcc6281c4a1e032
                                   - the chunk is the second chunk of the total 10 chunks
-                                  - the replica number 2 means the object has at least 3 replicas
                                 type: string
                               sizeBytes:
                                 description: SizeBytes represents the chunk size.

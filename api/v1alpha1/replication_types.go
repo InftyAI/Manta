@@ -24,10 +24,14 @@ import (
 // Source couldn't be nil, but if destination is nil,
 // it means to delete the file.
 type Target struct {
-	// TODO
-	// Address represents the communication address of the Pod.
+	// URI represents the file address with different storage.
+	// - oss://<bucket>.<endpoint>/<path-to-your-file>
+	// - localhost://<path-to-your-file>
+	URI *string `json:"uri,omitempty"`
+	// ModelHub represents the model registry for model downloads.
+	// ModelHub and address are exclusive.
 	// +optional
-	Address *string `json:"address,omitempty"`
+	ModelHub *ModelHub `json:"modelHub,omitempty"`
 }
 
 // Tuple represents a pair of source and destination.
@@ -37,6 +41,7 @@ type Tuple struct {
 	Source Target `json:"source"`
 	// Destination represents the destination of the file.
 	// If destination is nil, it means to delete the file.
+	// +optional
 	Destination *Target `json:"destination,omitempty"`
 }
 
@@ -44,13 +49,6 @@ type Tuple struct {
 type ReplicationSpec struct {
 	// NodeName represents which node should do replication.
 	NodeName string `json:"nodeName"`
-	// RepoName represents the repo name.
-	// +optional
-	RepoName *string `json:"repoName,omitempty"`
-	// ObjectPath represents the object path.
-	ObjectPath string `json:"objectPath"`
-	// ChunkName represents the target chunk name.
-	ChunkName string `json:"chunkName"`
 	// Tuples represents a slice of tuples.
 	// +optional
 	Tuples []Tuple `json:"tuples,omitempty"`

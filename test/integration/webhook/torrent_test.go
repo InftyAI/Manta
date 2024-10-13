@@ -24,9 +24,9 @@ import (
 	"github.com/inftyai/manta/test/util/wrapper"
 )
 
-var _ = ginkgo.Describe("model default and validation", func() {
+var _ = ginkgo.Describe("Torrent default and validation", func() {
 
-	// Delete all the Models for each case.
+	// Delete all the Torrents for each case.
 	ginkgo.AfterEach(func() {
 		var torrents api.TorrentList
 		gomega.Expect(k8sClient.List(ctx, &torrents)).To(gomega.Succeed())
@@ -40,7 +40,6 @@ var _ = ginkgo.Describe("model default and validation", func() {
 		torrent func() *api.Torrent
 		failed  bool
 	}
-	// TODO: add more testCases to cover update.
 	ginkgo.DescribeTable("test validating",
 		func(tc *testValidatingCase) {
 			if tc.failed {

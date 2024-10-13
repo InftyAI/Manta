@@ -155,5 +155,9 @@ func setupControllers(mgr ctrl.Manager, certsReady chan struct{}) {
 			setupLog.Error(err, "unable to create webhook", "webhook", "Torrent")
 			os.Exit(1)
 		}
+		if err := webhook.SetupReplicationWebhook(mgr); err != nil {
+			setupLog.Error(err, "unable to create webhook", "webhook", "Replication")
+			os.Exit(1)
+		}
 	}
 }

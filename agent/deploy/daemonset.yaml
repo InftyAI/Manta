@@ -1,0 +1,49 @@
+apiVersion: apps/v1
+kind: DaemonSet
+metadata:
+  name: manta-agent
+  labels:
+    app: manta-agent
+spec:
+  selector:
+    matchLabels:
+      app: manta-agent
+  template:
+    metadata:
+      labels:
+        app: manta-agent
+    spec:
+      serviceAccountName: manta-agent
+      initContainers:
+      - name: init-permissions
+        image: busybox
+        command: ['sh', '-c', 'chown -R 1000:3000 /workspace/models && chmod -R 777 /workspace/models']
+        volumeMounts:
+          - name: model-volume
+            mountPath: /workspace/models
+      containers:
+      - name: agent
+        image: inftyai/manta-agent:1013-08
+        ports:
+        - containerPort: 8080
+        resources:
+          limits:
+            memory: 200Mi
+          requests:
+            cpu: 100m
+        env:
+        - name: NODE_NAME
+          valueFrom:
+            fieldRef:
+              fieldPath: spec.nodeName
+        volumeMounts:
+        - name: model-volume
+          mountPath: /workspace/models
+        securityContext:
+          runAsUser: 1000
+          runAsGroup: 3000
+      volumes:
+      - name: model-volume
+        hostPath:
+          path: /mnt/models
+          type: DirectoryOrCreate

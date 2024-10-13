@@ -118,6 +118,8 @@ var _ = BeforeSuite(func() {
 
 	err = apiwebhook.SetupTorrentWebhook(mgr)
 	Expect(err).NotTo(HaveOccurred())
+	err = apiwebhook.SetupReplicationWebhook(mgr)
+	Expect(err).NotTo(HaveOccurred())
 
 	//+kubebuilder:scaffold:webhook
 
