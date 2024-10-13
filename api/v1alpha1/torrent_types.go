@@ -20,6 +20,12 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
+const (
+	TorrentNameLabelKey   = "manta.io/torrent-name"
+	DefaultWorkspace      = "/workspace/models/"
+	HUGGINGFACE_MODEL_HUB = "Huggingface"
+)
+
 // This is inspired by https://github.com/InftyAI/llmaz.
 // ModelHub represents the model registry for model downloads.
 type ModelHub struct {
@@ -70,8 +76,10 @@ type TorrentSpec struct {
 	// +optional
 	// URI *URIProtocol `json:"uri,omitempty"`
 
-	// Replicas represents the replication number of each file.
+	// Replicas represents the replication number of each object.
+	// The real Replicas number could be greater than the desired Replicas.
 	// +kubebuilder:default=1
+	// +kubebuilder:validation:Maximum=99
 	// +optional
 	Replicas *int32 `json:"replicas,omitempty"`
 	// ReclaimPolicy represents how to handle the file replicas when Torrent is deleted.
@@ -94,10 +102,15 @@ const (
 )
 
 type ChunkStatus struct {
-	// Name represents the name of the chunk. It's a hashed value.
+	// Name represents the name of the chunk.
+	// The chunk name is formatted as: <object hash>--<chunk number>,
+	// e.g. "945c19bff66ba533eb2032a33dcc6281c4a1e032--0210", which means:
+	// - the object hash is 945c19bff66ba533eb2032a33dcc6281c4a1e032
+	// - the chunk is the second chunk of the total 10 chunks
 	Name string `json:"name"`
 	// State represents the state of the chunk, whether in downloading
 	// or downloaded ready.
+	// Note that once all the Replicas are replicated, the State will transmit into Ready.
 	State TrackerState `json:"state"`
 	// SizeBytes represents the chunk size.
 	SizeBytes int64 `json:"sizeBytes"`
@@ -119,16 +132,9 @@ type ObjectStatus struct {
 	// Type represents the object type, limits to file or directory.
 	// +kubebuilder:validation:Enum={file,directory}
 	Type ObjectType `json:"type"`
-
-	// TODO: for embedding files.
-	// Objects []ObjectStatus `json:"objects,omitempty"`
 }
 
 type RepoStatus struct {
-	// RepoName represents the repo name of the file,
-	// it could be nil once the file has no repo.
-	// +optional
-	Name *string `json:"name,omitempty"`
 	// Objects represents the whole objects belongs to the repo.
 	Objects []*ObjectStatus `json:"objects,omitempty"`
 }

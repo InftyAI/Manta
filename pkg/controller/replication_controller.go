@@ -19,13 +19,18 @@ package controller
 import (
 	"context"
 
+	apimeta "k8s.io/apimachinery/pkg/api/meta"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
+	"k8s.io/apimachinery/pkg/types"
+	"k8s.io/client-go/tools/record"
+	"k8s.io/klog/v2"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller"
 	"sigs.k8s.io/controller-runtime/pkg/log"
 
-	inftyaicomv1alpha1 "github.com/inftyai/manta/api/v1alpha1"
+	api "github.com/inftyai/manta/api/v1alpha1"
 )
 
 // ReplicationReconciler reconciles a Replication object
@@ -34,23 +39,33 @@ type ReplicationReconciler struct {
 	Scheme *runtime.Scheme
 }
 
+func NewReplicationReconciler(client client.Client, scheme *runtime.Scheme, record record.EventRecorder) *TorrentReconciler {
+	return &TorrentReconciler{
+		Client: client,
+		Scheme: scheme,
+		Record: record,
+	}
+}
+
 //+kubebuilder:rbac:groups=manta.io,resources=replications,verbs=get;list;watch;create;update;patch;delete
 //+kubebuilder:rbac:groups=manta.io,resources=replications/status,verbs=get;update;patch
 //+kubebuilder:rbac:groups=manta.io,resources=replications/finalizers,verbs=update
 
-// Reconcile is part of the main kubernetes reconciliation loop which aims to
-// move the current state of the cluster closer to the desired state.
-// TODO(user): Modify the Reconcile function to compare the state specified by
-// the Replication object against the actual cluster state, and then
-// perform operations to make the cluster state reflect the state specified by
-// the user.
-//
 // For more details, check Reconcile and its Result here:
 // - https://pkg.go.dev/sigs.k8s.io/controller-runtime@v0.16.3/pkg/reconcile
 func (r *ReplicationReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
-	_ = log.FromContext(ctx)
+	logger := log.FromContext(ctx)
 
-	// TODO(user): your logic here
+	replication := &api.Replication{}
+	if err := r.Get(ctx, types.NamespacedName{Name: req.Name}, replication); err != nil {
+		return ctrl.Result{}, client.IgnoreNotFound(err)
+	}
+
+	logger.V(10).Info("reconcile Replication", "Replication", klog.KObj(replication))
+
+	if setReplicationCondition(replication) {
+		return ctrl.Result{}, r.Status().Update(ctx, replication)
+	}
 
 	return ctrl.Result{}, nil
 }
@@ -58,7 +73,20 @@ func (r *ReplicationReconciler) Reconcile(ctx context.Context, req ctrl.Request)
 // SetupWithManager sets up the controller with the Manager.
 func (r *ReplicationReconciler) SetupWithManager(mgr ctrl.Manager) error {
 	return ctrl.NewControllerManagedBy(mgr).
-		For(&inftyaicomv1alpha1.Replication{}).
+		For(&api.Replication{}).
 		WithOptions(controller.Options{MaxConcurrentReconciles: 5}).
 		Complete(r)
+}
+
+func setReplicationCondition(replication *api.Replication) (changed bool) {
+	if len(replication.Status.Conditions) == 0 {
+		condition := metav1.Condition{
+			Type:    api.PendingConditionType,
+			Status:  metav1.ConditionTrue,
+			Reason:  "Pending",
+			Message: "Waiting for downloading",
+		}
+		return apimeta.SetStatusCondition(&replication.Status.Conditions, condition)
+	}
+	return false
 }

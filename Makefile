@@ -61,8 +61,11 @@ IMAGE_BUILD_EXTRA_OPTS ?=
 IMAGE_REGISTRY ?= inftyai
 IMAGE_NAME ?= manta
 IMAGE_REPO := $(IMAGE_REGISTRY)/$(IMAGE_NAME)
+AGENT_IMAGE_NAME ?= manta-agent
+AGENT_IMAGE_REPO := $(IMAGE_REGISTRY)/$(AGENT_IMAGE_NAME)
 GIT_TAG ?= $(shell git describe --tags --dirty --always)
 IMG ?= $(IMAGE_REPO):$(GIT_TAG)
+AGENT_IMG ?= $(AGENT_IMAGE_REPO):$(GIT_TAG)
 BUILDER_IMAGE ?= golang:$(GO_VERSION)
 KIND_CLUSTER_NAME ?= kind
 
@@ -108,7 +111,7 @@ gotestsum: ## Download gotestsum locally if necessary.
 
 .PHONY: test
 test: manifests fmt vet envtest gotestsum ## Run tests.
-	$(GOTESTSUM) --junitfile $(ARTIFACTS)/junit.xml -- ./api/... ./pkg/... -coverprofile  $(ARTIFACTS)/cover.out
+	$(GOTESTSUM) --junitfile $(ARTIFACTS)/junit.xml -- ./api/... ./pkg/... ./agent/... -coverprofile  $(ARTIFACTS)/cover.out
 
 .PHONY: test-integration
 test-integration: manifests fmt vet envtest ginkgo ## Run integration tests.
@@ -173,6 +176,19 @@ image-load: IMAGE_BUILD_EXTRA_OPTS=--load
 image-load: image-build
 image-push: IMAGE_BUILD_EXTRA_OPTS=--push
 image-push: image-build
+
+.PHONY: agent-image-build
+agent-image-build:
+	$(IMAGE_BUILD_CMD) -t $(AGENT_IMG) \
+		-f Dockerfile.agent \
+		--build-arg BASE_IMAGE=$(BASE_IMAGE) \
+		--build-arg BUILDER_IMAGE=$(BUILDER_IMAGE) \
+		--build-arg CGO_ENABLED=$(CGO_ENABLED) \
+		$(IMAGE_BUILD_EXTRA_OPTS) ./
+agent-image-load: IMAGE_BUILD_EXTRA_OPTS=--load
+agent-image-load: agent-image-build
+agent-image-push: IMAGE_BUILD_EXTRA_OPTS=--push
+agent-image-push: agent-image-build
 
 KIND = $(shell pwd)/bin/kind
 .PHONY: kind
@@ -287,3 +303,11 @@ helm-package: helm
 
 	# To recover values.yaml
 	make helm
+
+.PHONY: deploy-agent
+deploy-agent:
+	$(KUBECTL) apply -f ./agent/deploy
+
+.PHONY: undeploy-agent
+undeploy-agent:
+	$(KUBECTL) delete -f ./agent/deploy

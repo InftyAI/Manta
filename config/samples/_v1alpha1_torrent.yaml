@@ -9,6 +9,7 @@ metadata:
     app.kubernetes.io/created-by: controller
   name: torrent-sample
 spec:
+  replicas: 1
   modelHub:
     modelID: Qwen/Qwen2-7B-Instruct
     # With one file.

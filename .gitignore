@@ -33,7 +33,3 @@ __pycache__
 *.tgz
 tmp
 bin
-
-# Added by cargo
-
-/target

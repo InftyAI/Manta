@@ -17,12 +17,22 @@ limitations under the License.
 package dispatcher
 
 import (
-	api "github.com/inftyai/manta/api/v1alpha1"
+	"errors"
+	"strings"
+
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/utils/ptr"
+
+	api "github.com/inftyai/manta/api/v1alpha1"
+	"github.com/inftyai/manta/pkg/util"
 )
 
 var _ Framework = &DefaultDownloader{}
 var _ Framework = &DefaultSyncer{}
+
+const (
+	localHost = "localhost://"
+)
 
 type DefaultDownloader struct {
 	plugins []string
@@ -77,8 +87,9 @@ func NewDispatcher(downloadPlugins []string, syncPlugins []string) *Dispatcher {
 
 // PrepareReplications will construct the replications needed to created and
 // update the torrent status the same time.
+// Note: make sure the same download/sync task will not be sent to the same node,
+// or we have to introduce file lock when downloading chunks.
 func (d *Dispatcher) PrepareReplications(torrent *api.Torrent) ([]*api.Replication, bool, error) {
-	// Make sure this will not happen, just in case of panic.
 	if torrent.Status.Repo == nil {
 		return nil, false, nil
 	}
@@ -88,32 +99,17 @@ func (d *Dispatcher) PrepareReplications(torrent *api.Torrent) ([]*api.Replicati
 
 	for _, obj := range torrent.Status.Repo.Objects {
 		for _, chunk := range obj.Chunks {
+			// TODO: we should also compare the desired Replicas with the real Replicas here.
 			if chunk.State == api.PendingTrackerState {
-				replication := &api.Replication{
-					TypeMeta: v1.TypeMeta{
-						Kind:       "Replication",
-						APIVersion: api.GroupVersion.String(),
-					},
-					ObjectMeta: v1.ObjectMeta{
-						Name: chunk.Name,
-					},
-					Spec: api.ReplicationSpec{
-						Tuples: []api.Tuple{
-							{
-								// TODO: source could be local or remote
-								Source: api.Target{
-									ChunkName: chunk.Name,
-								},
-								Destination: &api.Target{
-									ChunkName: chunk.Name,
-								},
-							},
-						},
-					},
+
+				// Create a Replication for each spec.replicas.
+				for i := 0; i < int(*torrent.Spec.Replicas); i++ {
+					replica, err := buildReplication(torrent, obj.Path, chunk.Name)
+					if err != nil {
+						return nil, false, err
+					}
+					replications = append(replications, replica)
 				}
-
-				replications = append(replications, replication)
-
 				// Update the chunk state as well, we'll update the status later.
 				chunk.State = api.DownloadTrackerState
 				torrentStatusChanged = true
@@ -121,4 +117,70 @@ func (d *Dispatcher) PrepareReplications(torrent *api.Torrent) ([]*api.Replicati
 		}
 	}
 	return replications, torrentStatusChanged, nil
+}
+
+func buildReplication(torrent *api.Torrent, objPath string, chunkName string) (*api.Replication, error) {
+	name, err := util.GenerateName(chunkName)
+	if err != nil {
+		return nil, err
+	}
+
+	// Support modelHub only right now.
+	if torrent.Spec.ModelHub == nil {
+		return nil, errors.New("unimplemented")
+	}
+
+	repoName := repoName(torrent.Spec.ModelHub)
+
+	return &api.Replication{
+		TypeMeta: v1.TypeMeta{
+			Kind:       "Replication",
+			APIVersion: api.GroupVersion.String(),
+		},
+		ObjectMeta: v1.ObjectMeta{
+			Name: name,
+			OwnerReferences: []v1.OwnerReference{
+				{
+					Kind:               "Torrent",
+					APIVersion:         api.GroupVersion.String(),
+					Name:               torrent.Name,
+					UID:                torrent.UID,
+					BlockOwnerDeletion: ptr.To(true),
+					Controller:         ptr.To(true),
+				},
+			},
+			Labels: map[string]string{
+				api.TorrentNameLabelKey: torrent.Name,
+			},
+		},
+		Spec: api.ReplicationSpec{
+			// TODO:
+			NodeName: "unknown",
+			Tuples: []api.Tuple{
+				{
+					Source: api.Target{
+						ModelHub: &api.ModelHub{
+							Name:    torrent.Spec.ModelHub.Name,
+							ModelID: torrent.Spec.ModelHub.ModelID,
+							// TODO: support multiple chunks for one file in the future.
+							Filename: &objPath,
+							Revision: torrent.Spec.ModelHub.Revision,
+						},
+					},
+					Destination: &api.Target{
+						URI: ptr.To[string](localHost + api.DefaultWorkspace + repoName + "/blobs/" + chunkName),
+					},
+				},
+			},
+		},
+	}, nil
+}
+
+func repoName(modelHub *api.ModelHub) string {
+	if modelHub.Filename != nil {
+		splits := strings.Split(*modelHub.Filename, ".")
+		return splits[0]
+	}
+
+	return strings.ReplaceAll(modelHub.ModelID, "/", "--")
 }

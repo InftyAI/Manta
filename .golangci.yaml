@@ -5,6 +5,7 @@ run:
     - api
     - cmd
     - pkg
+    - agent
     - test
 
 issues:
