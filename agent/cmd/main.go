@@ -17,20 +17,17 @@ limitations under the License.
 package main
 
 import (
-	"context"
 	"os"
 
 	"github.com/go-logr/logr"
-	apimeta "k8s.io/apimachinery/pkg/api/meta"
 	"k8s.io/apimachinery/pkg/runtime"
-	"k8s.io/client-go/tools/cache"
-	"k8s.io/klog/v2"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client/config"
+	"sigs.k8s.io/controller-runtime/pkg/healthz"
 	"sigs.k8s.io/controller-runtime/pkg/log/zap"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
 
-	"github.com/inftyai/manta/agent/handler"
+	"github.com/inftyai/manta/agent/pkg/controller"
 	api "github.com/inftyai/manta/api/v1alpha1"
 )
 
@@ -39,9 +36,6 @@ var (
 )
 
 func main() {
-	ctx, cancel := context.WithCancel(context.Background())
-	defer cancel()
-
 	ctrl.SetLogger(zap.New(zap.UseDevMode(true)))
 	setupLog = ctrl.Log.WithName("setup")
 
@@ -64,44 +58,26 @@ func main() {
 		os.Exit(1)
 	}
 
-	informer, err := mgr.GetCache().GetInformer(ctx, &api.Replication{})
-	if err != nil {
-		setupLog.Error(err, "failed to get the informer")
+	if err := (&controller.ReplicationReconciler{
+		Client: mgr.GetClient(),
+		Scheme: mgr.GetScheme(),
+	}).SetupWithManager(mgr); err != nil {
+		setupLog.Error(err, "unable to create controller", "controller", "Model")
 		os.Exit(1)
 	}
 
-	if _, err := informer.AddEventHandler(cache.ResourceEventHandlerFuncs{
-		AddFunc: func(obj interface{}) {
-			replication := obj.(*api.Replication)
-			setupLog.Info("Add Event for Replication", "Replication", klog.KObj(replication))
-
-			// Injected by downward API.
-			nodeName := os.Getenv("NODE_NAME")
-			// Filter out unrelated events.
-			if nodeName != replication.Spec.NodeName || replicationReady(replication) {
-				return
-			}
-			handler.HandleAddEvent(replication)
-		},
-		UpdateFunc: func(oldObj, newObj interface{}) {
-		},
-		DeleteFunc: func(obj interface{}) {
-			replication := obj.(*api.Replication)
-			setupLog.Info("Delete Event for Replication", "Replication", klog.KObj(replication))
-			// TODO: delete the file by the policy.
-		},
-	}); err != nil {
-		setupLog.Error(err, "failed to add event handlers")
+	if err := mgr.AddHealthzCheck("healthz", healthz.Ping); err != nil {
+		setupLog.Error(err, "unable to set up health check")
+		os.Exit(1)
+	}
+	if err := mgr.AddReadyzCheck("readyz", healthz.Ping); err != nil {
+		setupLog.Error(err, "unable to set up ready check")
 		os.Exit(1)
 	}
 
-	setupLog.Info("Starting informers")
-	if err := mgr.GetCache().Start(ctx); err != nil {
-		setupLog.Error(err, "failed to start informers")
+	setupLog.Info("starting manager")
+	if err := mgr.Start(ctrl.SetupSignalHandler()); err != nil {
+		setupLog.Error(err, "problem running manager")
 		os.Exit(1)
 	}
-}
-
-func replicationReady(replication *api.Replication) bool {
-	return apimeta.IsStatusConditionTrue(replication.Status.Conditions, api.ReadyConditionType)
 }

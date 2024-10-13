@@ -45,14 +45,11 @@ func downloadFromHF(modelID, revision, path string, downloadPath string) error {
 				return fmt.Errorf("reached maximum download attempts, download failed")
 			}
 
-			fmt.Printf("Error downloading file from %s: %v. Resuming.\n", url, err)
 			time.Sleep(interval)
 			continue
 		}
 		break
 	}
-
-	fmt.Printf("File %s downloaded successfully!", path)
 
 	return nil
 }
