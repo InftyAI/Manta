@@ -17,30 +17,47 @@ limitations under the License.
 package handler
 
 import (
-	"fmt"
 	"strings"
 	"sync"
+	"sync/atomic"
+
+	"github.com/go-logr/logr"
+	"k8s.io/klog/v2"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	api "github.com/inftyai/manta/api/v1alpha1"
 )
 
-func HandleAddEvent(replication *api.Replication) {
+func HandleReplication(logger logr.Logger, client client.Client, replication *api.Replication) (succeeded bool, stateChanged bool) {
 	var wg sync.WaitGroup
+	var errCount int32
+
+	logger.Info("start to handle Replication", "Replication", klog.KObj(replication))
 
 	for i := range replication.Spec.Tuples {
+		if *replication.Spec.Tuples[i].State == api.FinishedStateType {
+			continue
+		}
+
 		wg.Add(1)
 		go func() {
 			defer wg.Done()
-			if err := handleTuple(&replication.Spec.Tuples[i]); err != nil {
-				fmt.Printf("Error handling tuple: %v.\n", err)
+			if err := handleTuple(logger, &replication.Spec.Tuples[i]); err != nil {
+				logger.Error(err, "failed to handle Tuple")
+				atomic.AddInt32(&errCount, 1)
+			} else {
+				condition := api.FinishedStateType
+				replication.Spec.Tuples[i].State = (*api.StateType)(&condition)
+				stateChanged = true
 			}
 		}()
 	}
 
 	wg.Wait()
+	return errCount == 0, stateChanged
 }
 
-func handleTuple(tuple *api.Tuple) error {
+func handleTuple(logger logr.Logger, tuple *api.Tuple) error {
 	// If destination is nil, the address must not be localhost.
 	if tuple.Destination == nil {
 		// TODO: Delete OP
@@ -57,6 +74,8 @@ func handleTuple(tuple *api.Tuple) error {
 			// TODO: handle modelScope
 		}
 		// TODO: Handle address
+
+		logger.Info("download file successfully", "file", *tuple.Source.ModelHub.Filename)
 	}
 
 	return nil

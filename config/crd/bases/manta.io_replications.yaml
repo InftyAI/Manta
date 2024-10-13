@@ -135,6 +135,13 @@ spec:
                             - localhost://<path-to-your-file>
                           type: string
                       type: object
+                    state:
+                      default: Unfinished
+                      description: State represents the download status.
+                      enum:
+                      - Unfinished
+                      - Finished
+                      type: string
                   required:
                   - source
                   type: object

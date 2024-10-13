@@ -34,6 +34,13 @@ type Target struct {
 	ModelHub *ModelHub `json:"modelHub,omitempty"`
 }
 
+type StateType string
+
+const (
+	UnfinishedStateType = "Unfinished"
+	FinishedStateType   = "Finished"
+)
+
 // Tuple represents a pair of source and destination.
 type Tuple struct {
 	// Source represents the source file.
@@ -43,6 +50,10 @@ type Tuple struct {
 	// If destination is nil, it means to delete the file.
 	// +optional
 	Destination *Target `json:"destination,omitempty"`
+	// State represents the download status.
+	// +kubebuilder:default=Unfinished
+	// +kubebuilder:validation:Enum={Unfinished,Finished}
+	State *StateType `json:"state,omitempty"`
 }
 
 // ReplicationSpec defines the desired state of Replication
