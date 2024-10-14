@@ -23,12 +23,10 @@ import (
 // NodeTrackerSpec defines the desired state of NodeTracker
 // It acts like a cache.
 type NodeTrackerSpec struct {
-	// TODO: GC disk rate.
 }
 
 // NodeTrackerStatus defines the observed state of NodeTracker
 type NodeTrackerStatus struct {
-	// Files []FileTracker `json:"files,omitempty"`
 }
 
 //+kubebuilder:object:root=true

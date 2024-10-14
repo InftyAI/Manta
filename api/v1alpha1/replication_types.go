@@ -24,9 +24,11 @@ import (
 // Source couldn't be nil, but if destination is nil,
 // it means to delete the file.
 type Target struct {
-	// URI represents the file address with different storage.
-	// - oss://<bucket>.<endpoint>/<path-to-your-file>
-	// - localhost://<path-to-your-file>
+	// URI represents the file address with different storages, e.g.:
+	// 	 - oss://<bucket>.<endpoint>/<path-to-your-file>
+	// 	 - localhost://<path-to-your-file>
+	// Note: if it's a folder, all the files under the folder will be considered,
+	// otherwise, only one file will be replicated.
 	URI *string `json:"uri,omitempty"`
 	// ModelHub represents the model registry for model downloads.
 	// ModelHub and address are exclusive.

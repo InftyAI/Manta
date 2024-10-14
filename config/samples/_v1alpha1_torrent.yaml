@@ -7,11 +7,11 @@ metadata:
     app.kubernetes.io/part-of: controller
     app.kubernetes.io/managed-by: kustomize
     app.kubernetes.io/created-by: controller
-  name: torrent-sample
+  name: torrent-sample-1
 spec:
   replicas: 1
   modelHub:
-    modelID: Qwen/Qwen2-7B-Instruct
+    # modelID: Qwen/Qwen2-7B-Instruct
     # With one file.
-    # modelID: Qwen/Qwen2-0.5B-Instruct-GGUF
-    # filename: qwen2-0_5b-instruct-q5_k_m.gguf
+    modelID: Qwen/Qwen2-0.5B-Instruct-GGUF
+    filename: qwen2-0_5b-instruct-q5_k_m.gguf

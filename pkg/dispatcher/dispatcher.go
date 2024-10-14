@@ -18,13 +18,13 @@ package dispatcher
 
 import (
 	"errors"
+	"strconv"
 	"strings"
 
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/utils/ptr"
 
 	api "github.com/inftyai/manta/api/v1alpha1"
-	"github.com/inftyai/manta/pkg/util"
 )
 
 var _ Framework = &DefaultDownloader{}
@@ -97,21 +97,22 @@ func (d *Dispatcher) PrepareReplications(torrent *api.Torrent) ([]*api.Replicati
 	replications := []*api.Replication{}
 	var torrentStatusChanged bool
 
-	for _, obj := range torrent.Status.Repo.Objects {
-		for _, chunk := range obj.Chunks {
+	for i, obj := range torrent.Status.Repo.Objects {
+		for j, chunk := range obj.Chunks {
 			// TODO: we should also compare the desired Replicas with the real Replicas here.
 			if chunk.State == api.PendingTrackerState {
 
 				// Create a Replication for each spec.replicas.
 				for i := 0; i < int(*torrent.Spec.Replicas); i++ {
-					replica, err := buildReplication(torrent, obj.Path, chunk.Name)
+					replica, err := buildReplication(torrent, obj.Path, chunk.Name, i)
 					if err != nil {
 						return nil, false, err
 					}
 					replications = append(replications, replica)
 				}
-				// Update the chunk state as well, we'll update the status later.
-				chunk.State = api.DownloadTrackerState
+				// Update the chunk state as well, we'll update the status later, next time, we'll not
+				// construct the Replication anymore.
+				torrent.Status.Repo.Objects[i].Chunks[j].State = api.TrackedTrackerState
 				torrentStatusChanged = true
 			}
 		}
@@ -119,12 +120,7 @@ func (d *Dispatcher) PrepareReplications(torrent *api.Torrent) ([]*api.Replicati
 	return replications, torrentStatusChanged, nil
 }
 
-func buildReplication(torrent *api.Torrent, objPath string, chunkName string) (*api.Replication, error) {
-	name, err := util.GenerateName(chunkName)
-	if err != nil {
-		return nil, err
-	}
-
+func buildReplication(torrent *api.Torrent, objPath string, chunkName string, index int) (*api.Replication, error) {
 	// Support modelHub only right now.
 	if torrent.Spec.ModelHub == nil {
 		return nil, errors.New("unimplemented")
@@ -138,7 +134,7 @@ func buildReplication(torrent *api.Torrent, objPath string, chunkName string) (*
 			APIVersion: api.GroupVersion.String(),
 		},
 		ObjectMeta: v1.ObjectMeta{
-			Name: name,
+			Name: chunkName + "--" + strconv.Itoa(index),
 			OwnerReferences: []v1.OwnerReference{
 				{
 					Kind:               "Torrent",
@@ -151,6 +147,7 @@ func buildReplication(torrent *api.Torrent, objPath string, chunkName string) (*
 			},
 			Labels: map[string]string{
 				api.TorrentNameLabelKey: torrent.Name,
+				api.ChunkNameLabelKey:   chunkName,
 			},
 		},
 		Spec: api.ReplicationSpec{
@@ -177,10 +174,5 @@ func buildReplication(torrent *api.Torrent, objPath string, chunkName string) (*
 }
 
 func repoName(modelHub *api.ModelHub) string {
-	if modelHub.Filename != nil {
-		splits := strings.Split(*modelHub.Filename, ".")
-		return splits[0]
-	}
-
 	return strings.ReplaceAll(modelHub.ModelID, "/", "--")
 }
