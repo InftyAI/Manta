@@ -22,6 +22,7 @@ import (
 
 const (
 	TorrentNameLabelKey   = "manta.io/torrent-name"
+	ChunkNameLabelKey     = "manta.io/chunk-name"
 	DefaultWorkspace      = "/workspace/models/"
 	HUGGINGFACE_MODEL_HUB = "Huggingface"
 )
@@ -96,9 +97,8 @@ type TorrentSpec struct {
 type TrackerState string
 
 const (
-	PendingTrackerState  TrackerState = "Pending"
-	DownloadTrackerState TrackerState = "Downloading"
-	ReadyTrackerState    TrackerState = "Ready"
+	PendingTrackerState TrackerState = "Pending"
+	TrackedTrackerState TrackerState = "Tracked"
 )
 
 type ChunkStatus struct {
@@ -128,7 +128,8 @@ type ObjectStatus struct {
 	// Path represents the path of the object.
 	Path string `json:"path"`
 	// Chunks represents the whole chunks which makes up the object.
-	Chunks []*ChunkStatus `json:"chunks,omitempty"`
+	// +optional
+	Chunks []ChunkStatus `json:"chunks,omitempty"`
 	// Type represents the object type, limits to file or directory.
 	// +kubebuilder:validation:Enum={file,directory}
 	Type ObjectType `json:"type"`
@@ -136,16 +137,17 @@ type ObjectStatus struct {
 
 type RepoStatus struct {
 	// Objects represents the whole objects belongs to the repo.
-	Objects []*ObjectStatus `json:"objects,omitempty"`
+	// +optional
+	Objects []ObjectStatus `json:"objects,omitempty"`
 }
 
 const (
 	// PendingConditionType represents the Torrent is Pending.
-	PendingConditionType = string(PendingTrackerState)
+	PendingConditionType = "Pending"
 	// DownloadConditionType represents the Torrent is under downloading.
-	DownloadConditionType = string(DownloadTrackerState)
+	DownloadConditionType = "Downloading"
 	// ReadyConditionType represents the Torrent is downloaded successfully.
-	ReadyConditionType = string(ReadyTrackerState)
+	ReadyConditionType = "Ready"
 )
 
 // TorrentStatus defines the observed state of Torrent

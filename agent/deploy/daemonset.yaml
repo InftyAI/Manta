@@ -23,7 +23,7 @@ spec:
             mountPath: /workspace/models
       containers:
       - name: agent
-        image: inftyai/manta-agent:1013-19
+        image: inftyai/manta-agent:1014-01
         ports:
         - containerPort: 8080
         resources:

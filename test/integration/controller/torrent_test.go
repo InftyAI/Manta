@@ -79,7 +79,7 @@ var _ = ginkgo.Describe("Torrent controller test", func() {
 				},
 			},
 		}),
-		ginkgo.Entry("Torrent with only modelHub file create", &testValidatingCase{
+		ginkgo.Entry("Torrent with modelHub file create", &testValidatingCase{
 			makeTorrent: func() *api.Torrent {
 				return wrapper.MakeTorrent("qwen2-7b-gguf").ModelHub("Huggingface", "Qwen/Qwen2-0.5B-Instruct-GGUF", "qwen2-0_5b-instruct-q5_k_m.gguf").Obj()
 			},

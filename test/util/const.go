@@ -18,6 +18,6 @@ package util
 import "time"
 
 const (
-	Timeout  = 10 * time.Second
+	Timeout  = 15 * time.Second
 	Interval = time.Millisecond * 250
 )

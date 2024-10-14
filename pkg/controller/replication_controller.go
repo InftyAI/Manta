@@ -61,11 +61,13 @@ func (r *ReplicationReconciler) Reconcile(ctx context.Context, req ctrl.Request)
 		return ctrl.Result{}, client.IgnoreNotFound(err)
 	}
 
-	logger.V(10).Info("reconcile Replication", "Replication", klog.KObj(replication))
+	logger.Info("reconcile Replication", "Replication", klog.KObj(replication))
 
 	if setReplicationCondition(replication) {
 		return ctrl.Result{}, r.Status().Update(ctx, replication)
 	}
+
+	// If Torrent ready, delete the replications.
 
 	return ctrl.Result{}, nil
 }

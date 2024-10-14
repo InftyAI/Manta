@@ -164,14 +164,8 @@ func (in *ObjectStatus) DeepCopyInto(out *ObjectStatus) {
 	*out = *in
 	if in.Chunks != nil {
 		in, out := &in.Chunks, &out.Chunks
-		*out = make([]*ChunkStatus, len(*in))
-		for i := range *in {
-			if (*in)[i] != nil {
-				in, out := &(*in)[i], &(*out)[i]
-				*out = new(ChunkStatus)
-				**out = **in
-			}
-		}
+		*out = make([]ChunkStatus, len(*in))
+		copy(*out, *in)
 	}
 }
 
@@ -293,13 +287,9 @@ func (in *RepoStatus) DeepCopyInto(out *RepoStatus) {
 	*out = *in
 	if in.Objects != nil {
 		in, out := &in.Objects, &out.Objects
-		*out = make([]*ObjectStatus, len(*in))
+		*out = make([]ObjectStatus, len(*in))
 		for i := range *in {
-			if (*in)[i] != nil {
-				in, out := &(*in)[i], &(*out)[i]
-				*out = new(ObjectStatus)
-				(*in).DeepCopyInto(*out)
-			}
+			(*in)[i].DeepCopyInto(&(*out)[i])
 		}
 	}
 }
