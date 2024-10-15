@@ -88,8 +88,8 @@ type TorrentSpec struct {
 	// +kubebuilder:validation:Enum={Retain,Delete}
 	// +optional
 	ReclaimPolicy *ReclaimPolicy `json:"reclaimPolicy,omitempty"`
-	// NodeSelector represents the node constraint to download the chunks.
-	// It can be used to download the model to one node for special case.
+	// NodeSelector represents the node constraints to download the chunks.
+	// It can be used to download the model to a specified node for preheating.
 	// +optional
 	NodeSelector map[string]string `json:"nodeSelector,omitempty"`
 }
