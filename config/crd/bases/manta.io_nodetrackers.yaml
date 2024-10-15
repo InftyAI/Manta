@@ -40,6 +40,34 @@ spec:
             description: |-
               NodeTrackerSpec defines the desired state of NodeTracker
               It acts like a cache.
+            properties:
+              chunks:
+                description: Chunks represents a list of chunks replicated in this
+                  node.
+                items:
+                  properties:
+                    chunkName:
+                      description: ChunkName represents the name of the chunk.
+                      type: string
+                    path:
+                      description: Path represents the relative path of a file.
+                      type: string
+                    repoName:
+                      description: |-
+                        RepoName represents the name of the repo, it could be the model repo name
+                        or folder name.
+                      type: string
+                    sizeBytes:
+                      description: SizeBytes represents the chunk size.
+                      format: int64
+                      type: integer
+                  required:
+                  - chunkName
+                  - path
+                  - repoName
+                  - sizeBytes
+                  type: object
+                type: array
             type: object
           status:
             description: NodeTrackerStatus defines the observed state of NodeTracker

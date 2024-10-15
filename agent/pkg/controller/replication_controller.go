@@ -25,14 +25,13 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
-	"k8s.io/client-go/tools/record"
 	"k8s.io/klog/v2"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller"
 	"sigs.k8s.io/controller-runtime/pkg/log"
 
-	"github.com/inftyai/manta/agent/pkg/handler"
+	agenthandler "github.com/inftyai/manta/agent/pkg/handler"
 	api "github.com/inftyai/manta/api/v1alpha1"
 )
 
@@ -46,7 +45,7 @@ type ReplicationReconciler struct {
 	Scheme *runtime.Scheme
 }
 
-func NewReplicationReconciler(client client.Client, scheme *runtime.Scheme, record record.EventRecorder) *ReplicationReconciler {
+func NewReplicationReconciler(client client.Client, scheme *runtime.Scheme) *ReplicationReconciler {
 	return &ReplicationReconciler{
 		Client: client,
 		Scheme: scheme,
@@ -64,8 +63,8 @@ func (r *ReplicationReconciler) Reconcile(ctx context.Context, req ctrl.Request)
 	}
 
 	// Filter out unrelated events.
-	if NODE_NAME != replication.Spec.NodeName || replicationReady(replication) || replication.DeletionTimestamp != nil {
-		logger.Info("skip replication", "Replication", klog.KObj(replication))
+	if replication.Spec.NodeName != NODE_NAME || replicationReady(replication) || replication.DeletionTimestamp != nil {
+		logger.V(10).Info("skip replication", "Replication", klog.KObj(replication))
 		return ctrl.Result{}, nil
 	}
 
@@ -76,7 +75,7 @@ func (r *ReplicationReconciler) Reconcile(ctx context.Context, req ctrl.Request)
 	}
 
 	// This may take a long time, the concurrency is controlled by the MaxConcurrentReconciles.
-	succeeded, stateChanged := handler.HandleReplication(logger, r.Client, replication)
+	succeeded, stateChanged := agenthandler.HandleReplication(logger, r.Client, replication)
 	if stateChanged {
 		// TODO: using patch to avoid update conflicts.
 		if err := r.Update(ctx, replication); err != nil {

@@ -5,4 +5,4 @@ kind: Kustomization
 images:
 - name: controller
   newName: inftyai/manta
-  newTag: 1014-06
+  newTag: 1015-06

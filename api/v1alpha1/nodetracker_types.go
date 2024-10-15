@@ -20,14 +20,28 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
+type ChunkTracker struct {
+	// ChunkName represents the name of the chunk.
+	ChunkName string `json:"chunkName"`
+	// RepoName represents the name of the repo, it could be the model repo name
+	// or folder name.
+	RepoName string `json:"repoName"`
+	// Path represents the relative path of a file.
+	Path string `json:"path"`
+	// SizeBytes represents the chunk size.
+	SizeBytes int64 `json:"sizeBytes"`
+}
+
 // NodeTrackerSpec defines the desired state of NodeTracker
 // It acts like a cache.
 type NodeTrackerSpec struct {
+	// Chunks represents a list of chunks replicated in this node.
+	// +optional
+	Chunks []ChunkTracker `json:"chunks,omitempty"`
 }
 
 // NodeTrackerStatus defines the observed state of NodeTracker
-type NodeTrackerStatus struct {
-}
+type NodeTrackerStatus struct{}
 
 //+kubebuilder:object:root=true
 //+kubebuilder:subresource:status
