@@ -22,7 +22,6 @@ import (
 
 const (
 	TorrentNameLabelKey   = "manta.io/torrent-name"
-	ChunkNameLabelKey     = "manta.io/chunk-name"
 	DefaultWorkspace      = "/workspace/models/"
 	HUGGINGFACE_MODEL_HUB = "Huggingface"
 )

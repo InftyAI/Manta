@@ -18,7 +18,6 @@ package controller
 
 import (
 	"context"
-	"fmt"
 	"os"
 
 	apimeta "k8s.io/apimachinery/pkg/api/meta"
@@ -63,7 +62,10 @@ func (r *ReplicationReconciler) Reconcile(ctx context.Context, req ctrl.Request)
 	}
 
 	// Filter out unrelated events.
-	if replication.Spec.NodeName != NODE_NAME || replicationReady(replication) || replication.DeletionTimestamp != nil {
+	if replication.Spec.NodeName != NODE_NAME ||
+		replicationReady(replication) ||
+		replication.DeletionTimestamp != nil ||
+		len(replication.Status.Conditions) == 0 {
 		logger.V(10).Info("Skip replication", "Replication", klog.KObj(replication))
 		return ctrl.Result{}, nil
 	}
@@ -75,25 +77,40 @@ func (r *ReplicationReconciler) Reconcile(ctx context.Context, req ctrl.Request)
 	}
 
 	// This may take a long time, the concurrency is controlled by the MaxConcurrentReconciles.
-	succeeded, stateChanged := agenthandler.HandleReplication(logger, r.Client, replication)
-	if stateChanged {
-		// TODO: using patch to avoid update conflicts.
-		if err := r.Update(ctx, replication); err != nil {
-			return ctrl.Result{}, err
-		}
-	}
-	if !succeeded {
-		return ctrl.Result{}, fmt.Errorf("handle Replication error")
-	}
-
-	if tuplesReady(replication) {
-		// If succeeded, set to ready.
+	if err := agenthandler.HandleReplication(logger, replication); err != nil {
+		return ctrl.Result{}, err
+	} else {
 		if conditionChanged := setReplicationCondition(replication, api.ReadyConditionType); conditionChanged {
-			return ctrl.Result{}, r.Status().Update(ctx, replication)
+			if err := r.Status().Update(ctx, replication); err != nil {
+				return ctrl.Result{}, err
+			}
+		}
+		if err := r.updateNodeTracker(ctx, replication); err != nil {
+			return ctrl.Result{}, err
 		}
 	}
 
 	return ctrl.Result{}, nil
+}
+
+func (r *ReplicationReconciler) updateNodeTracker(ctx context.Context, replication *api.Replication) error {
+	nodeTracker := &api.NodeTracker{}
+	if err := r.Get(ctx, types.NamespacedName{Name: replication.Spec.NodeName}, nodeTracker); err != nil {
+		return err
+	}
+
+	chunkName := replication.Spec.ChunkName
+	for _, chunk := range nodeTracker.Spec.Chunks {
+		if chunk.ChunkName == chunkName {
+			// Already included.
+			return nil
+		}
+	}
+	nodeTracker.Spec.Chunks = append(nodeTracker.Spec.Chunks, api.ChunkTracker{ChunkName: chunkName})
+	if err := r.Client.Update(ctx, nodeTracker); err != nil {
+		return err
+	}
+	return nil
 }
 
 // SetupWithManager sets up the controller with the Manager.
@@ -130,13 +147,4 @@ func setReplicationCondition(replication *api.Replication, conditionType string)
 
 func replicationReady(replication *api.Replication) bool {
 	return apimeta.IsStatusConditionTrue(replication.Status.Conditions, api.ReadyConditionType)
-}
-
-func tuplesReady(replication *api.Replication) bool {
-	for _, tuple := range replication.Spec.Tuples {
-		if *tuple.State != api.FinishedStateType {
-			return false
-		}
-	}
-	return true
 }
