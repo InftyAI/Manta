@@ -84,6 +84,7 @@ func handleTuple(logger logr.Logger, tuple *api.Tuple) error {
 		}
 
 		if *tuple.Source.ModelHub.Name == api.HUGGINGFACE_MODEL_HUB {
+			logger.Info("Start to download file from Huggingface Hub", "file", filename)
 			if err := downloadFromHF(tuple.Source.ModelHub.ModelID, revision, filename, localPath); err != nil {
 				return err
 			}

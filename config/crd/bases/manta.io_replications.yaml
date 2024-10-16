@@ -92,6 +92,10 @@ spec:
                             only one file will be replicated."
                           type: string
                       type: object
+                    sizeBytes:
+                      description: SizeBytes represents the chunk size.
+                      format: int64
+                      type: integer
                     source:
                       description: |-
                         Source represents the source file.
@@ -145,6 +149,7 @@ spec:
                       - Finished
                       type: string
                   required:
+                  - sizeBytes
                   - source
                   type: object
                 type: array
