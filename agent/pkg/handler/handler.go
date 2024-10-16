@@ -21,48 +21,16 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
-	"sync"
-	"sync/atomic"
 
 	"github.com/go-logr/logr"
-	"k8s.io/klog/v2"
-	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	api "github.com/inftyai/manta/api/v1alpha1"
 )
 
-func HandleReplication(logger logr.Logger, client client.Client, replication *api.Replication) (succeeded bool, stateChanged bool) {
-	var wg sync.WaitGroup
-	var errCount int32
-
-	logger.Info("start to handle Replication", "Replication", klog.KObj(replication))
-
-	for i := range replication.Spec.Tuples {
-		if *replication.Spec.Tuples[i].State == api.FinishedStateType {
-			continue
-		}
-
-		wg.Add(1)
-		go func() {
-			defer wg.Done()
-			if err := handleTuple(logger, &replication.Spec.Tuples[i]); err != nil {
-				logger.Error(err, "failed to handle Tuple")
-				atomic.AddInt32(&errCount, 1)
-			} else {
-				condition := api.FinishedStateType
-				replication.Spec.Tuples[i].State = (*api.StateType)(&condition)
-				stateChanged = true
-			}
-		}()
-	}
-
-	wg.Wait()
-	return errCount == 0, stateChanged
-}
-
-func handleTuple(logger logr.Logger, tuple *api.Tuple) error {
+// This only happens when replication not ready.
+func HandleReplication(logger logr.Logger, replication *api.Replication) error {
 	// If destination is nil, the address must not be localhost.
-	if tuple.Destination == nil {
+	if replication.Spec.Destination == nil {
 		// TODO: Delete OP
 		return nil
 	}
@@ -70,10 +38,10 @@ func handleTuple(logger logr.Logger, tuple *api.Tuple) error {
 	var localPath, revision, filename, targetPath string
 
 	// If modelHub != nil, it must be download to the localhost.
-	if tuple.Source.ModelHub != nil {
-		_, localPath = parseURI(*tuple.Destination.URI)
-		revision = *tuple.Source.ModelHub.Revision
-		filename = *tuple.Source.ModelHub.Filename
+	if replication.Spec.Source.ModelHub != nil {
+		_, localPath = parseURI(*replication.Spec.Destination.URI)
+		revision = *replication.Spec.Source.ModelHub.Revision
+		filename = *replication.Spec.Source.ModelHub.Filename
 		splits := strings.Split(localPath, "/blobs/")
 		targetPath = splits[0] + "/snapshots/" + revision + "/" + filename
 
@@ -83,9 +51,9 @@ func handleTuple(logger logr.Logger, tuple *api.Tuple) error {
 			return nil
 		}
 
-		if *tuple.Source.ModelHub.Name == api.HUGGINGFACE_MODEL_HUB {
+		if *replication.Spec.Source.ModelHub.Name == api.HUGGINGFACE_MODEL_HUB {
 			logger.Info("Start to download file from Huggingface Hub", "file", filename)
-			if err := downloadFromHF(tuple.Source.ModelHub.ModelID, revision, filename, localPath); err != nil {
+			if err := downloadFromHF(replication.Spec.Source.ModelHub.ModelID, revision, filename, localPath); err != nil {
 				return err
 			}
 			// TODO: handle modelScope

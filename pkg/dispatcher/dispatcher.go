@@ -147,29 +147,25 @@ func buildReplication(torrent *api.Torrent, objPath string, chunkName string, si
 			},
 			Labels: map[string]string{
 				api.TorrentNameLabelKey: torrent.Name,
-				api.ChunkNameLabelKey:   chunkName,
 			},
 		},
 		Spec: api.ReplicationSpec{
 			// TODO:
-			NodeName: "unknown",
-			Tuples: []api.Tuple{
-				{
-					Source: api.Target{
-						ModelHub: &api.ModelHub{
-							Name:    torrent.Spec.ModelHub.Name,
-							ModelID: torrent.Spec.ModelHub.ModelID,
-							// TODO: support multiple chunks for one file in the future.
-							Filename: &objPath,
-							Revision: torrent.Spec.ModelHub.Revision,
-						},
-					},
-					Destination: &api.Target{
-						URI: ptr.To[string](localHost + api.DefaultWorkspace + repoName + "/blobs/" + chunkName),
-					},
-					SizeBytes: size,
+			NodeName:  "unknown",
+			ChunkName: chunkName,
+			Source: api.Target{
+				ModelHub: &api.ModelHub{
+					Name:    torrent.Spec.ModelHub.Name,
+					ModelID: torrent.Spec.ModelHub.ModelID,
+					// TODO: support multiple chunks for one file in the future.
+					Filename: &objPath,
+					Revision: torrent.Spec.ModelHub.Revision,
 				},
 			},
+			Destination: &api.Target{
+				URI: ptr.To[string](localHost + api.DefaultWorkspace + repoName + "/blobs/" + chunkName),
+			},
+			SizeBytes: size,
 		},
 	}, nil
 }

@@ -59,15 +59,7 @@ var _ = ginkgo.Describe("Replication default and validation", func() {
 		ginkgo.Entry("replication with modelHub and URI unset", &testValidatingCase{
 			replication: func() *api.Replication {
 				replication := wrapper.MakeReplication("fake-replication").Obj()
-				tuple := api.Tuple{Source: api.Target{}}
-				replication.Spec.Tuples = []api.Tuple{tuple}
 				return replication
-			},
-			failed: true,
-		}),
-		ginkgo.Entry("replication with empty Tuples", &testValidatingCase{
-			replication: func() *api.Replication {
-				return wrapper.MakeReplication("fake-replication").Obj()
 			},
 			failed: true,
 		}),

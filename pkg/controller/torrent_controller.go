@@ -19,7 +19,6 @@ package controller
 import (
 	"context"
 	"fmt"
-	"reflect"
 
 	"k8s.io/apimachinery/pkg/api/errors"
 	apimeta "k8s.io/apimachinery/pkg/api/meta"
@@ -175,12 +174,8 @@ func (r *TorrentReconciler) SetupWithManager(mgr ctrl.Manager) error {
 		WithOptions(controller.Options{MaxConcurrentReconciles: 5}).
 		Watches(&api.Replication{}, handler.EnqueueRequestsFromMapFunc(mapFunc),
 			builder.WithPredicates(predicate.Funcs{
-				CreateFunc: func(e event.CreateEvent) bool { return false },
-				UpdateFunc: func(e event.UpdateEvent) bool {
-					oldRep := e.ObjectOld.(*api.Replication)
-					newRep := e.ObjectNew.(*api.Replication)
-					return !reflect.DeepEqual(oldRep.Spec.Tuples, newRep.Spec.Tuples)
-				},
+				CreateFunc:  func(e event.CreateEvent) bool { return false },
+				UpdateFunc:  func(e event.UpdateEvent) bool { return true },
 				DeleteFunc:  func(e event.DeleteEvent) bool { return false },
 				GenericFunc: func(e event.GenericEvent) bool { return false },
 			})).

@@ -61,11 +61,8 @@ func (w *ReplicationWrapper) SourceOfModelHub(name, modelID, revision, filename 
 	if filename != "" {
 		source.ModelHub.Filename = &filename
 	}
-	if len(w.Spec.Tuples) == 0 {
-		w.Spec.Tuples = append(w.Spec.Tuples, api.Tuple{Source: source})
-	} else {
-		w.Spec.Tuples[0].Source = source
-	}
+
+	w.Spec.Source = source
 	return w
 }
 
@@ -74,10 +71,6 @@ func (w *ReplicationWrapper) DestinationOfAddress(address string) *ReplicationWr
 	destination := api.Target{
 		URI: &address,
 	}
-	if len(w.Spec.Tuples) == 0 {
-		w.Spec.Tuples = append(w.Spec.Tuples, api.Tuple{Destination: &destination})
-	} else {
-		w.Spec.Tuples[0].Destination = &destination
-	}
+	w.Spec.Destination = &destination
 	return w
 }

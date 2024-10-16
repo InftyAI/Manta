@@ -36,15 +36,12 @@ type Target struct {
 	ModelHub *ModelHub `json:"modelHub,omitempty"`
 }
 
-type StateType string
-
-const (
-	UnfinishedStateType = "Unfinished"
-	FinishedStateType   = "Finished"
-)
-
-// Tuple represents a pair of source and destination.
-type Tuple struct {
+// ReplicationSpec defines the desired state of Replication
+type ReplicationSpec struct {
+	// NodeName represents which node should do replication.
+	NodeName string `json:"nodeName"`
+	// ChunkName represents the replicating chunk name.
+	ChunkName string `json:"chunkName"`
 	// Source represents the source file.
 	// Source couldn't be nil.
 	Source Target `json:"source"`
@@ -52,21 +49,8 @@ type Tuple struct {
 	// If destination is nil, it means to delete the file.
 	// +optional
 	Destination *Target `json:"destination,omitempty"`
-	// State represents the download status.
-	// +kubebuilder:default=Unfinished
-	// +kubebuilder:validation:Enum={Unfinished,Finished}
-	State *StateType `json:"state,omitempty"`
 	// SizeBytes represents the chunk size.
 	SizeBytes int64 `json:"sizeBytes"`
-}
-
-// ReplicationSpec defines the desired state of Replication
-type ReplicationSpec struct {
-	// NodeName represents which node should do replication.
-	NodeName string `json:"nodeName"`
-	// Tuples represents a slice of tuples.
-	// +optional
-	Tuples []Tuple `json:"tuples,omitempty"`
 }
 
 type ReplicateState string

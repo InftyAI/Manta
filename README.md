@@ -23,4 +23,4 @@ _Name Story: the inspiration of the name `Manta` is coming from Dota2, called [M
 
 ![architecture](./docs/assets/arch.png)
 
-> Note: [llmaz](https://github.com/InftyAI/llmaz) is just one kind of natively integrated creator, **Manta** can be deployed independently.
+> Note: [llmaz](https://github.com/InftyAI/llmaz) is just one kind of integrations, **Manta** can be deployed independently.

@@ -74,18 +74,12 @@ func (w *ReplicationWebhook) generateValidate(obj runtime.Object) field.ErrorLis
 	specPath := field.NewPath("spec")
 
 	var allErrs field.ErrorList
-	if len(replication.Spec.Tuples) == 0 {
-		allErrs = append(allErrs, field.Forbidden(specPath.Child("tuples"), "tuples couldn't be null"))
-	}
 
-	for _, tuple := range replication.Spec.Tuples {
-		if tuple.Destination != nil && tuple.Destination.ModelHub == nil && tuple.Destination.URI == nil ||
-			tuple.Source.ModelHub == nil && tuple.Source.URI == nil {
-			allErrs = append(allErrs, field.Forbidden(specPath.Child("tuples"), "modelHub and URI couldn't be both null in Destination"))
-		}
-		if tuple.Source.ModelHub == nil && tuple.Source.URI == nil {
-			allErrs = append(allErrs, field.Forbidden(specPath.Child("tuples"), "modelHub and URI couldn't be both null in Source"))
-		}
+	if replication.Spec.Destination != nil && replication.Spec.Destination.ModelHub == nil && replication.Spec.Destination.URI == nil {
+		allErrs = append(allErrs, field.Forbidden(specPath.Child("destination"), "modelHub and URI couldn't be both null in Destination"))
+	}
+	if replication.Spec.Source.ModelHub == nil && replication.Spec.Source.URI == nil {
+		allErrs = append(allErrs, field.Forbidden(specPath.Child("source"), "modelHub and URI couldn't be both null in Source"))
 	}
 	return allErrs
 }

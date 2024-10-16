@@ -39,122 +39,109 @@ spec:
           spec:
             description: ReplicationSpec defines the desired state of Replication
             properties:
+              chunkName:
+                description: ChunkName represents the replicating chunk name.
+                type: string
+              destination:
+                description: |-
+                  Destination represents the destination of the file.
+                  If destination is nil, it means to delete the file.
+                properties:
+                  modelHub:
+                    description: |-
+                      ModelHub represents the model registry for model downloads.
+                      ModelHub and address are exclusive.
+                    properties:
+                      filename:
+                        description: |-
+                          Filename refers to a specified model file rather than the whole repo.
+                          This is helpful to download a specified GGUF model rather than downloading
+                          the whole repo which includes all kinds of quantized models.
+                          in the near future.
+                        type: string
+                      modelID:
+                        description: |-
+                          ModelID refers to the model identifier on model hub,
+                          such as meta-llama/Meta-Llama-3-8B.
+                        type: string
+                      name:
+                        default: Huggingface
+                        description: Name refers to the model registry, such as huggingface.
+                        enum:
+                        - Huggingface
+                        type: string
+                      revision:
+                        default: main
+                        description: Revision refers to a Git revision id which can
+                          be a branch name, a tag, or a commit hash.
+                        type: string
+                    required:
+                    - modelID
+                    type: object
+                  uri:
+                    description: "URI represents the file address with different storages,
+                      e.g.:\n\t - oss://<bucket>.<endpoint>/<path-to-your-file>\n\t
+                      - localhost://<path-to-your-file>\nNote: if it's a folder, all
+                      the files under the folder will be considered,\notherwise, only
+                      one file will be replicated."
+                    type: string
+                type: object
               nodeName:
                 description: NodeName represents which node should do replication.
                 type: string
-              tuples:
-                description: Tuples represents a slice of tuples.
-                items:
-                  description: Tuple represents a pair of source and destination.
-                  properties:
-                    destination:
-                      description: |-
-                        Destination represents the destination of the file.
-                        If destination is nil, it means to delete the file.
-                      properties:
-                        modelHub:
-                          description: |-
-                            ModelHub represents the model registry for model downloads.
-                            ModelHub and address are exclusive.
-                          properties:
-                            filename:
-                              description: |-
-                                Filename refers to a specified model file rather than the whole repo.
-                                This is helpful to download a specified GGUF model rather than downloading
-                                the whole repo which includes all kinds of quantized models.
-                                in the near future.
-                              type: string
-                            modelID:
-                              description: |-
-                                ModelID refers to the model identifier on model hub,
-                                such as meta-llama/Meta-Llama-3-8B.
-                              type: string
-                            name:
-                              default: Huggingface
-                              description: Name refers to the model registry, such
-                                as huggingface.
-                              enum:
-                              - Huggingface
-                              type: string
-                            revision:
-                              default: main
-                              description: Revision refers to a Git revision id which
-                                can be a branch name, a tag, or a commit hash.
-                              type: string
-                          required:
-                          - modelID
-                          type: object
-                        uri:
-                          description: "URI represents the file address with different
-                            storages, e.g.:\n\t - oss://<bucket>.<endpoint>/<path-to-your-file>\n\t
-                            - localhost://<path-to-your-file>\nNote: if it's a folder,
-                            all the files under the folder will be considered,\notherwise,
-                            only one file will be replicated."
-                          type: string
-                      type: object
-                    sizeBytes:
-                      description: SizeBytes represents the chunk size.
-                      format: int64
-                      type: integer
-                    source:
-                      description: |-
-                        Source represents the source file.
-                        Source couldn't be nil.
-                      properties:
-                        modelHub:
-                          description: |-
-                            ModelHub represents the model registry for model downloads.
-                            ModelHub and address are exclusive.
-                          properties:
-                            filename:
-                              description: |-
-                                Filename refers to a specified model file rather than the whole repo.
-                                This is helpful to download a specified GGUF model rather than downloading
-                                the whole repo which includes all kinds of quantized models.
-                                in the near future.
-                              type: string
-                            modelID:
-                              description: |-
-                                ModelID refers to the model identifier on model hub,
-                                such as meta-llama/Meta-Llama-3-8B.
-                              type: string
-                            name:
-                              default: Huggingface
-                              description: Name refers to the model registry, such
-                                as huggingface.
-                              enum:
-                              - Huggingface
-                              type: string
-                            revision:
-                              default: main
-                              description: Revision refers to a Git revision id which
-                                can be a branch name, a tag, or a commit hash.
-                              type: string
-                          required:
-                          - modelID
-                          type: object
-                        uri:
-                          description: "URI represents the file address with different
-                            storages, e.g.:\n\t - oss://<bucket>.<endpoint>/<path-to-your-file>\n\t
-                            - localhost://<path-to-your-file>\nNote: if it's a folder,
-                            all the files under the folder will be considered,\notherwise,
-                            only one file will be replicated."
-                          type: string
-                      type: object
-                    state:
-                      default: Unfinished
-                      description: State represents the download status.
-                      enum:
-                      - Unfinished
-                      - Finished
-                      type: string
-                  required:
-                  - sizeBytes
-                  - source
-                  type: object
-                type: array
+              sizeBytes:
+                description: SizeBytes represents the chunk size.
+                format: int64
+                type: integer
+              source:
+                description: |-
+                  Source represents the source file.
+                  Source couldn't be nil.
+                properties:
+                  modelHub:
+                    description: |-
+                      ModelHub represents the model registry for model downloads.
+                      ModelHub and address are exclusive.
+                    properties:
+                      filename:
+                        description: |-
+                          Filename refers to a specified model file rather than the whole repo.
+                          This is helpful to download a specified GGUF model rather than downloading
+                          the whole repo which includes all kinds of quantized models.
+                          in the near future.
+                        type: string
+                      modelID:
+                        description: |-
+                          ModelID refers to the model identifier on model hub,
+                          such as meta-llama/Meta-Llama-3-8B.
+                        type: string
+                      name:
+                        default: Huggingface
+                        description: Name refers to the model registry, such as huggingface.
+                        enum:
+                        - Huggingface
+                        type: string
+                      revision:
+                        default: main
+                        description: Revision refers to a Git revision id which can
+                          be a branch name, a tag, or a commit hash.
+                        type: string
+                    required:
+                    - modelID
+                    type: object
+                  uri:
+                    description: "URI represents the file address with different storages,
+                      e.g.:\n\t - oss://<bucket>.<endpoint>/<path-to-your-file>\n\t
+                      - localhost://<path-to-your-file>\nNote: if it's a folder, all
+                      the files under the folder will be considered,\notherwise, only
+                      one file will be replicated."
+                    type: string
+                type: object
             required:
+            - chunkName
             - nodeName
+            - sizeBytes
+            - source
             type: object
           status:
             description: ReplicationStatus defines the observed state of Replication
