@@ -22,17 +22,16 @@ import (
 	"net/http"
 	"os"
 	"path/filepath"
-	"time"
 )
 
 const (
 	maxAttempts = 10
-	interval    = 500 * time.Millisecond
 )
 
+// The downloadPath is the full path, like: /workspace/models/Qwen--Qwen2-7B-Instruct/blobs/20024bfe7c83998e9aeaf98a0cd6a2ce6306c2f0--0001
 func downloadFromHF(modelID, revision, path string, downloadPath string) error {
 	// Example: "https://huggingface.co/Qwen/Qwen2.5-72B-Instruct/resolve/main/model-00031-of-00037.safetensors"
-	url := fmt.Sprintf("https://huggingface.co/%s/resolve/%s/%s", modelID, revision, path)
+	url := fmt.Sprintf("%s/%s/resolve/%s/%s", hfEndpoint(), modelID, revision, path)
 	token := hfToken()
 
 	attempts := 0
@@ -42,16 +41,22 @@ func downloadFromHF(modelID, revision, path string, downloadPath string) error {
 
 		if err := downloadFileWithResume(url, downloadPath, token); err != nil {
 			if attempts > maxAttempts {
-				return fmt.Errorf("reached maximum download attempts, download failed")
+				return fmt.Errorf("reach maximum download attempts for %s, err: %v", downloadPath, err)
 			}
-
-			time.Sleep(interval)
 			continue
 		}
 		break
 	}
 
 	return nil
+}
+
+func hfEndpoint() string {
+	hfEndpoint := "https://huggingface.co"
+	if endpoint := os.Getenv("HF_ENDPOINT"); endpoint != "" {
+		hfEndpoint = endpoint
+	}
+	return hfEndpoint
 }
 
 func hfToken() string {

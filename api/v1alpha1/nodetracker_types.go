@@ -20,16 +20,12 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
+// No file Path here is just because one chunk could be referenced by several
+// different files, no limitations here. But one chunk could only be belonged
+// to one repo if there's no hash conflicts, we're happy here.
 type ChunkTracker struct {
 	// ChunkName represents the name of the chunk.
 	ChunkName string `json:"chunkName"`
-	// RepoName represents the name of the repo, it could be the model repo name
-	// or folder name.
-	RepoName string `json:"repoName"`
-	// Path represents the relative path of a file.
-	Path string `json:"path"`
-	// SizeBytes represents the chunk size.
-	SizeBytes int64 `json:"sizeBytes"`
 }
 
 // NodeTrackerSpec defines the desired state of NodeTracker

@@ -23,7 +23,7 @@ spec:
             mountPath: /workspace/models
       containers:
       - name: agent
-        image: inftyai/manta-agent:1015-21
+        image: inftyai/manta-agent:1016-04
         ports:
         - containerPort: 8080
         resources:
@@ -36,6 +36,8 @@ spec:
           valueFrom:
             fieldRef:
               fieldPath: spec.nodeName
+        # - name: HF_ENDPOINT
+        #   value: https://hf-mirror.com
         volumeMounts:
         - name: model-volume
           mountPath: /workspace/models

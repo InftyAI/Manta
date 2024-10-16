@@ -20,6 +20,7 @@ import (
 	"context"
 	"fmt"
 	"os"
+	"path/filepath"
 	"time"
 
 	"github.com/go-logr/logr"
@@ -36,7 +37,9 @@ import (
 )
 
 const (
-	syncDuration = 1 * time.Minute
+	syncDuration = 5 * time.Minute
+
+	workspace = "/workspace/models/"
 )
 
 var (
@@ -52,7 +55,7 @@ func BackgroundTasks(ctx context.Context, c client.Client) {
 }
 
 func syncChunks(ctx context.Context, c client.Client) {
-	forFunc := func() error {
+	forFunc := func(ctx context.Context) error {
 		attempts := 0
 		for {
 			attempts += 1
@@ -73,15 +76,43 @@ func syncChunks(ctx context.Context, c client.Client) {
 	}
 
 	for {
-		if err := forFunc(); err != nil {
+		// To avoid context memory escape.
+		ctx, cancel := context.WithCancel(ctx)
+
+		if err := forFunc(ctx); err != nil {
 			// If happens, which means the cluster is unstable.
 			logger.Error(err, "Failed to create nodeTracker")
 		} else {
 			logger.Info("Syncing the chunks")
-			// TODO
+
+			if chunkNames, err := walkThroughChunks(workspace); err != nil {
+				logger.Error(err, "Failed to walk through chunks")
+			} else {
+				nodeTracker := &api.NodeTracker{}
+				if err := c.Get(ctx, types.NamespacedName{Name: os.Getenv("NODE_NAME")}, nodeTracker); err != nil {
+					logger.Error(err, "Failed to get nodeTracker", "nodeTracker", os.Getenv("NODE_NAME"))
+				} else {
+					UpdateChunks(nodeTracker, chunkNames)
+					if err := c.Update(ctx, nodeTracker); err != nil {
+						logger.Error(err, "Failed to update nodeTracker", "NodeTracker", nodeTracker.Name)
+					}
+				}
+			}
 		}
 
+		cancel()
 		time.Sleep(syncDuration)
+	}
+}
+
+func UpdateChunks(nt *api.NodeTracker, chunkNames []string) {
+	nt.Spec.Chunks = make([]api.ChunkTracker, 0, len(chunkNames))
+	for _, name := range chunkNames {
+		nt.Spec.Chunks = append(nt.Spec.Chunks,
+			api.ChunkTracker{
+				ChunkName: name,
+			},
+		)
 	}
 }
 
@@ -121,4 +152,65 @@ func findOrCreateNodeTracker(ctx context.Context, c client.Client) error {
 	}
 
 	return nil
+}
+
+func walkThroughChunks(path string) (chunks []string, err error) {
+	fileMap := make(map[string]struct{})
+
+	repos, err := os.ReadDir(path)
+	if err != nil {
+		return nil, err
+	}
+
+	for _, repo := range repos {
+		if !repo.IsDir() {
+			continue
+		}
+
+		snapshotPath := path + repo.Name() + "/snapshots/"
+		if _, err := os.Stat(snapshotPath); err != nil {
+			return nil, err
+		}
+
+		revisions, err := os.ReadDir(snapshotPath)
+		if err != nil {
+			return nil, err
+		}
+
+		for _, revision := range revisions {
+			revisionPath := snapshotPath + revision.Name() + "/"
+
+			if !revision.IsDir() {
+				continue
+			}
+
+			files, err := os.ReadDir(revisionPath)
+			if err != nil {
+				return nil, err
+			}
+
+			for _, file := range files {
+				if file.IsDir() {
+					continue
+				}
+
+				filePath := revisionPath + file.Name()
+				targetPath, err := os.Readlink(filePath)
+				if err != nil {
+					return nil, err
+				}
+
+				chunkName := filepath.Base(targetPath)
+
+				// To avoid duplicated files
+				if _, ok := fileMap[chunkName]; !ok {
+					chunks = append(chunks, chunkName)
+					fileMap[chunkName] = struct{}{}
+				}
+			}
+		}
+
+	}
+
+	return chunks, nil
 }

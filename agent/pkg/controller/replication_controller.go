@@ -64,11 +64,11 @@ func (r *ReplicationReconciler) Reconcile(ctx context.Context, req ctrl.Request)
 
 	// Filter out unrelated events.
 	if replication.Spec.NodeName != NODE_NAME || replicationReady(replication) || replication.DeletionTimestamp != nil {
-		logger.V(10).Info("skip replication", "Replication", klog.KObj(replication))
+		logger.V(10).Info("Skip replication", "Replication", klog.KObj(replication))
 		return ctrl.Result{}, nil
 	}
 
-	logger.Info("reconcile Replication", "Replication", klog.KObj(replication))
+	logger.Info("Reconcile replication", "Replication", klog.KObj(replication))
 
 	if conditionChanged := setReplicationCondition(replication, api.DownloadConditionType); conditionChanged {
 		return ctrl.Result{}, r.Status().Update(ctx, replication)

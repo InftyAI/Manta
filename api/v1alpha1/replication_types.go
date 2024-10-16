@@ -56,6 +56,8 @@ type Tuple struct {
 	// +kubebuilder:default=Unfinished
 	// +kubebuilder:validation:Enum={Unfinished,Finished}
 	State *StateType `json:"state,omitempty"`
+	// SizeBytes represents the chunk size.
+	SizeBytes int64 `json:"sizeBytes"`
 }
 
 // ReplicationSpec defines the desired state of Replication

@@ -104,7 +104,7 @@ func (d *Dispatcher) PrepareReplications(torrent *api.Torrent) ([]*api.Replicati
 
 				// Create a Replication for each spec.replicas.
 				for i := 0; i < int(*torrent.Spec.Replicas); i++ {
-					replica, err := buildReplication(torrent, obj.Path, chunk.Name, i)
+					replica, err := buildReplication(torrent, obj.Path, chunk.Name, chunk.SizeBytes, i)
 					if err != nil {
 						return nil, false, err
 					}
@@ -120,7 +120,7 @@ func (d *Dispatcher) PrepareReplications(torrent *api.Torrent) ([]*api.Replicati
 	return replications, torrentStatusChanged, nil
 }
 
-func buildReplication(torrent *api.Torrent, objPath string, chunkName string, index int) (*api.Replication, error) {
+func buildReplication(torrent *api.Torrent, objPath string, chunkName string, size int64, index int) (*api.Replication, error) {
 	// Support modelHub only right now.
 	if torrent.Spec.ModelHub == nil {
 		return nil, errors.New("unimplemented")
@@ -167,6 +167,7 @@ func buildReplication(torrent *api.Torrent, objPath string, chunkName string, in
 					Destination: &api.Target{
 						URI: ptr.To[string](localHost + api.DefaultWorkspace + repoName + "/blobs/" + chunkName),
 					},
+					SizeBytes: size,
 				},
 			},
 		},

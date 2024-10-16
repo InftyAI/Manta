@@ -35,7 +35,7 @@ func Test_downloadFromHF(t *testing.T) {
 			modelID:      "Qwen/Qwen2.5-72B-Instruct",
 			revision:     "main",
 			path:         "LICENSE",
-			downloadPath: "../../tmp/LICENSE",
+			downloadPath: "../../../tmp/LICENSE",
 			wantError:    false,
 		},
 		{
@@ -43,7 +43,7 @@ func Test_downloadFromHF(t *testing.T) {
 			modelID:      "Qwen/Qwen2.5-72B-Instruct",
 			revision:     "master", // unknown branch
 			path:         "LICENSE",
-			downloadPath: "../../tmp/LICENSE",
+			downloadPath: "../../../tmp/LICENSE",
 			wantError:    true,
 		},
 	}
