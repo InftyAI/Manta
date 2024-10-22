@@ -40,6 +40,9 @@ import (
 	api "github.com/inftyai/manta/api/v1alpha1"
 	controller "github.com/inftyai/manta/pkg/controller"
 	"github.com/inftyai/manta/pkg/dispatcher"
+	"github.com/inftyai/manta/pkg/dispatcher/framework"
+	"github.com/inftyai/manta/pkg/dispatcher/plugins/diskaware"
+	"github.com/inftyai/manta/pkg/dispatcher/plugins/nodeselector"
 )
 
 // These tests use Ginkgo (BDD-style Go testing framework). Refer to
@@ -102,8 +105,15 @@ var _ = BeforeSuite(func() {
 	})
 	Expect(err).ToNot(HaveOccurred())
 
-	torrentController := controller.NewTorrentReconciler(mgr.GetClient(), mgr.GetScheme(), mgr.GetEventRecorderFor("torrent"), dispatcher.NewDispatcher([]string{}, []string{}))
+	dispatcher, err := dispatcher.NewDispatcher([]framework.RegisterFunc{nodeselector.New, diskaware.New}, []framework.RegisterFunc{})
+	Expect(err).ToNot(HaveOccurred())
+
+	torrentController := controller.NewTorrentReconciler(mgr.GetClient(), mgr.GetScheme(), dispatcher)
 	Expect(torrentController.SetupWithManager(mgr)).NotTo(HaveOccurred())
+	replicationController := controller.NewReplicationReconciler(mgr.GetClient(), mgr.GetScheme())
+	Expect(replicationController.SetupWithManager(mgr)).NotTo(HaveOccurred())
+	nodeTrackerController := controller.NewNodeTrackerReconciler(mgr.GetClient(), mgr.GetScheme(), dispatcher)
+	Expect(nodeTrackerController.SetupWithManager(mgr)).NotTo(HaveOccurred())
 
 	go func() {
 		defer GinkgoRecover()

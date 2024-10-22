@@ -85,14 +85,14 @@ func syncChunks(ctx context.Context, c client.Client) {
 		} else {
 			logger.Info("Syncing the chunks")
 
-			if chunkNames, err := walkThroughChunks(workspace); err != nil {
+			if chunks, err := walkThroughChunks(workspace); err != nil {
 				logger.Error(err, "Failed to walk through chunks")
 			} else {
 				nodeTracker := &api.NodeTracker{}
 				if err := c.Get(ctx, types.NamespacedName{Name: os.Getenv("NODE_NAME")}, nodeTracker); err != nil {
 					logger.Error(err, "Failed to get nodeTracker", "nodeTracker", os.Getenv("NODE_NAME"))
 				} else {
-					UpdateChunks(nodeTracker, chunkNames)
+					UpdateChunks(nodeTracker, chunks)
 					if err := c.Update(ctx, nodeTracker); err != nil {
 						logger.Error(err, "Failed to update nodeTracker", "NodeTracker", nodeTracker.Name)
 					}
@@ -105,12 +105,13 @@ func syncChunks(ctx context.Context, c client.Client) {
 	}
 }
 
-func UpdateChunks(nt *api.NodeTracker, chunkNames []string) {
-	nt.Spec.Chunks = make([]api.ChunkTracker, 0, len(chunkNames))
-	for _, name := range chunkNames {
+func UpdateChunks(nt *api.NodeTracker, chunks []chunkInfo) {
+	nt.Spec.Chunks = make([]api.ChunkTracker, 0, len(chunks))
+	for _, chunk := range chunks {
 		nt.Spec.Chunks = append(nt.Spec.Chunks,
 			api.ChunkTracker{
-				ChunkName: name,
+				ChunkName: chunk.Name,
+				SizeBytes: chunk.SizeBytes,
 			},
 		)
 	}
@@ -138,6 +139,7 @@ func findOrCreateNodeTracker(ctx context.Context, c client.Client) error {
 		}
 
 		nodeTracker.Name = nodeName
+		nodeTracker.Labels = node.Labels
 		nodeTracker.OwnerReferences = []v1.OwnerReference{
 			{
 				Kind:               "Node",
@@ -148,13 +150,24 @@ func findOrCreateNodeTracker(ctx context.Context, c client.Client) error {
 				Controller:         ptr.To(true),
 			},
 		}
+
+		sizeLimit := os.Getenv("SIZE_LIMIT")
+		if sizeLimit != "" {
+			nodeTracker.Spec.SizeLimit = ptr.To[string](sizeLimit)
+		}
+
 		return c.Create(newCtx, &nodeTracker)
 	}
 
 	return nil
 }
 
-func walkThroughChunks(path string) (chunks []string, err error) {
+type chunkInfo struct {
+	Name      string
+	SizeBytes int64
+}
+
+func walkThroughChunks(path string) (chunks []chunkInfo, err error) {
 	fileMap := make(map[string]struct{})
 
 	repos, err := os.ReadDir(path)
@@ -199,12 +212,19 @@ func walkThroughChunks(path string) (chunks []string, err error) {
 				if err != nil {
 					return nil, err
 				}
+				fileInfo, err := os.Stat(filePath)
+				if err != nil {
+					return nil, err
+				}
 
 				chunkName := filepath.Base(targetPath)
 
 				// To avoid duplicated files
 				if _, ok := fileMap[chunkName]; !ok {
-					chunks = append(chunks, chunkName)
+					chunks = append(chunks, chunkInfo{
+						Name:      chunkName,
+						SizeBytes: fileInfo.Size(),
+					})
 					fileMap[chunkName] = struct{}{}
 				}
 			}

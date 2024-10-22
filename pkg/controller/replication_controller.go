@@ -23,11 +23,11 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
-	"k8s.io/client-go/tools/record"
 	"k8s.io/klog/v2"
+	"k8s.io/utils/ptr"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
-	"sigs.k8s.io/controller-runtime/pkg/controller"
+	"sigs.k8s.io/controller-runtime/pkg/event"
 	"sigs.k8s.io/controller-runtime/pkg/log"
 
 	api "github.com/inftyai/manta/api/v1alpha1"
@@ -39,11 +39,10 @@ type ReplicationReconciler struct {
 	Scheme *runtime.Scheme
 }
 
-func NewReplicationReconciler(client client.Client, scheme *runtime.Scheme, record record.EventRecorder) *TorrentReconciler {
-	return &TorrentReconciler{
+func NewReplicationReconciler(client client.Client, scheme *runtime.Scheme) *ReplicationReconciler {
+	return &ReplicationReconciler{
 		Client: client,
 		Scheme: scheme,
-		Record: record,
 	}
 }
 
@@ -66,17 +65,32 @@ func (r *ReplicationReconciler) Reconcile(ctx context.Context, req ctrl.Request)
 	if setReplicationCondition(replication) {
 		return ctrl.Result{}, r.Status().Update(ctx, replication)
 	}
-
-	// If Torrent ready, delete the replications.
-
 	return ctrl.Result{}, nil
+}
+
+// Only watch for create events.
+
+func (r *ReplicationReconciler) Create(e event.CreateEvent) bool {
+	return true
+}
+
+func (r *ReplicationReconciler) Delete(e event.DeleteEvent) bool {
+	return false
+}
+
+func (r *ReplicationReconciler) Update(e event.UpdateEvent) bool {
+	return false
+}
+
+func (r *ReplicationReconciler) Generic(e event.GenericEvent) bool {
+	return false
 }
 
 // SetupWithManager sets up the controller with the Manager.
 func (r *ReplicationReconciler) SetupWithManager(mgr ctrl.Manager) error {
 	return ctrl.NewControllerManagedBy(mgr).
 		For(&api.Replication{}).
-		WithOptions(controller.Options{MaxConcurrentReconciles: 5}).
+		WithEventFilter(r).
 		Complete(r)
 }
 
@@ -88,6 +102,7 @@ func setReplicationCondition(replication *api.Replication) (changed bool) {
 			Reason:  "Pending",
 			Message: "Waiting for downloading",
 		}
+		replication.Status.Phase = ptr.To[string](api.PendingConditionType)
 		return apimeta.SetStatusCondition(&replication.Status.Conditions, condition)
 	}
 	return false

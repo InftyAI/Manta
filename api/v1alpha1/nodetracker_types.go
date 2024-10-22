@@ -26,6 +26,8 @@ import (
 type ChunkTracker struct {
 	// ChunkName represents the name of the chunk.
 	ChunkName string `json:"chunkName"`
+	// SizeBytes represents the chunk size.
+	SizeBytes int64 `json:"sizeBytes"`
 }
 
 // NodeTrackerSpec defines the desired state of NodeTracker
@@ -34,6 +36,11 @@ type NodeTrackerSpec struct {
 	// Chunks represents a list of chunks replicated in this node.
 	// +optional
 	Chunks []ChunkTracker `json:"chunks,omitempty"`
+	// SizeLimit sets the maximum memory reserved for chunks.
+	// If nil, means no limit here, use the whole disk,
+	// use 1Tib instead right now.
+	// +optional
+	SizeLimit *string `json:"sizeLimit,omitempty"`
 }
 
 // NodeTrackerStatus defines the observed state of NodeTracker

@@ -43,7 +43,7 @@ func Test_walkThroughChunks(t *testing.T) {
 		t.Error(err)
 	}
 
-	wantFiles := []string{"blob1", "blob2", "blob-same", "blobA", "blobB"}
+	wantFiles := []chunkInfo{{Name: "blob1"}, {Name: "blob2"}, {Name: "blob-same"}, {Name: "blobA"}, {Name: "blobB"}}
 
 	if diff := cmp.Diff(chunks, wantFiles); diff != "" {
 		t.Errorf("unexpected files, diff %v", diff)

@@ -16,6 +16,10 @@ limitations under the License.
 
 package util
 
+import (
+	"sort"
+)
+
 func SetContains(values []string, value string) bool {
 	for i := range values {
 		if value == values[i] {
@@ -46,4 +50,37 @@ func SetAdd(values []string, value string) []string {
 		newValues = append(newValues, values[i])
 	}
 	return append(newValues, value)
+}
+
+// Get the top-n indices from the arr.
+func TopNIndices(arr []float32, n int) []int32 {
+	if len(arr) <= n {
+		indices := []int32{}
+		for i := 0; i < len(arr); i++ {
+			indices = append(indices, int32(i))
+		}
+		return indices
+	}
+
+	type indexedValue struct {
+		value float32
+		index int
+	}
+
+	indexedArr := make([]indexedValue, len(arr))
+	for i, v := range arr {
+		indexedArr[i] = indexedValue{value: v, index: i}
+	}
+
+	// Sort by descend.
+	sort.Slice(indexedArr, func(i, j int) bool {
+		return indexedArr[i].value > indexedArr[j].value
+	})
+
+	topIndices := make([]int32, n)
+	for i := 0; i < n; i++ {
+		topIndices[i] = int32(indexedArr[i].index)
+	}
+
+	return topIndices
 }

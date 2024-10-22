@@ -26,8 +26,8 @@ import (
 	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
-	"k8s.io/client-go/tools/record"
 	"k8s.io/klog/v2"
+	"k8s.io/utils/ptr"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/builder"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -46,16 +46,14 @@ import (
 type TorrentReconciler struct {
 	client.Client
 	Scheme     *runtime.Scheme
-	Record     record.EventRecorder
-	Dispatcher *dispatcher.Dispatcher
+	dispatcher *dispatcher.Dispatcher
 }
 
-func NewTorrentReconciler(client client.Client, scheme *runtime.Scheme, record record.EventRecorder, dispatcher *dispatcher.Dispatcher) *TorrentReconciler {
+func NewTorrentReconciler(client client.Client, scheme *runtime.Scheme, dispatcher *dispatcher.Dispatcher) *TorrentReconciler {
 	return &TorrentReconciler{
 		Client:     client,
 		Scheme:     scheme,
-		Record:     record,
-		Dispatcher: dispatcher,
+		dispatcher: dispatcher,
 	}
 }
 
@@ -75,8 +73,22 @@ func (r *TorrentReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ct
 
 	logger.Info("reconcile Torrent", "Torrent", klog.KObj(torrent))
 
-	// Once ready, no need to do anything.
 	if torrentReady(torrent) {
+		logger.Info("start to delete replications since torrent is ready", "Torrent", klog.KObj(torrent))
+
+		replicationList := &api.ReplicationList{}
+		selector := labels.SelectorFromSet(labels.Set{api.TorrentNameLabelKey: torrent.Name})
+		if err := r.List(ctx, replicationList, &client.ListOptions{
+			LabelSelector: selector,
+		}); err != nil {
+			return ctrl.Result{}, err
+		}
+
+		for _, replication := range replicationList.Items {
+			if err := r.Client.Delete(ctx, &replication); err != nil {
+				return ctrl.Result{}, err
+			}
+		}
 		return ctrl.Result{}, nil
 	}
 
@@ -89,15 +101,20 @@ func (r *TorrentReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ct
 		if err != nil {
 			return ctrl.Result{}, err
 		}
-		constructRepoOfStatus(torrent, objects)
+		constructRepoStatus(torrent, objects)
 
 		return ctrl.Result{}, r.Client.Status().Update(ctx, torrent)
 	}
 
 	// Handle dispatch.
 
+	nodeTrackers := &api.NodeTrackerList{}
+	if err := r.List(ctx, nodeTrackers, &client.ListOptions{}); err != nil {
+		return ctrl.Result{}, err
+	}
+
 	// Do not delete the Replication manually or they will be created again.
-	replications, torrentStatusChanged, err := r.Dispatcher.PrepareReplications(torrent)
+	replications, torrentStatusChanged, err := r.dispatcher.PrepareReplications(ctx, torrent, nodeTrackers.Items)
 	if err != nil {
 		return ctrl.Result{}, err
 	}
@@ -190,6 +207,18 @@ func setTorrentCondition(torrent *api.Torrent, replicationList *api.ReplicationL
 			Reason:  "Pending",
 			Message: "Waiting for Replication creations",
 		}
+		torrent.Status.Phase = ptr.To[string](api.PendingConditionType)
+		return apimeta.SetStatusCondition(&torrent.Status.Conditions, condition)
+	}
+
+	if apimeta.IsStatusConditionTrue(torrent.Status.Conditions, api.DownloadConditionType) && replicationsReady(replicationList.Items) {
+		condition := metav1.Condition{
+			Type:    api.ReadyConditionType,
+			Status:  metav1.ConditionTrue,
+			Reason:  "Ready",
+			Message: "Download chunks successfully",
+		}
+		torrent.Status.Phase = ptr.To[string](api.ReadyConditionType)
 		return apimeta.SetStatusCondition(&torrent.Status.Conditions, condition)
 	}
 
@@ -200,16 +229,7 @@ func setTorrentCondition(torrent *api.Torrent, replicationList *api.ReplicationL
 			Reason:  "Downloading",
 			Message: "Downloading chunks",
 		}
-		return apimeta.SetStatusCondition(&torrent.Status.Conditions, condition)
-	}
-
-	if replicationsReady(replicationList) {
-		condition := metav1.Condition{
-			Type:    api.ReadyConditionType,
-			Status:  metav1.ConditionTrue,
-			Reason:  "Ready",
-			Message: "Download chunks successfully",
-		}
+		torrent.Status.Phase = ptr.To[string](api.DownloadConditionType)
 		return apimeta.SetStatusCondition(&torrent.Status.Conditions, condition)
 	}
 
@@ -217,16 +237,22 @@ func setTorrentCondition(torrent *api.Torrent, replicationList *api.ReplicationL
 }
 
 func torrentDownloading(replicationList *api.ReplicationList) bool {
-	return replicationList != nil && len(replicationList.Items) > 0
+	for _, replication := range replicationList.Items {
+		// If one replication is in downloading, then yes.
+		if apimeta.IsStatusConditionTrue(replication.Status.Conditions, api.DownloadConditionType) {
+			return true
+		}
+	}
+	return false
 }
 
-func replicationsReady(replicationList *api.ReplicationList) bool {
-	if len(replicationList.Items) == 0 {
+func replicationsReady(replications []api.Replication) bool {
+	if len(replications) == 0 {
 		return false
 	}
 
-	for _, obj := range replicationList.Items {
-		if apimeta.IsStatusConditionFalse(obj.Status.Conditions, api.ReadyConditionType) {
+	for _, obj := range replications {
+		if !apimeta.IsStatusConditionTrue(obj.Status.Conditions, api.ReadyConditionType) {
 			return false
 		}
 	}
@@ -238,7 +264,7 @@ func torrentReady(torrent *api.Torrent) bool {
 }
 
 // We have one chunk for one file for now.
-func constructRepoOfStatus(torrent *api.Torrent, objects []*util.ObjectBody) {
+func constructRepoStatus(torrent *api.Torrent, objects []*util.ObjectBody) {
 	repo := &api.RepoStatus{}
 
 	if torrent.Spec.ModelHub.Filename != nil {

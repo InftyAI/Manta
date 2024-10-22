@@ -16,7 +16,11 @@ limitations under the License.
 
 package util
 
-import "testing"
+import (
+	"testing"
+
+	"github.com/google/go-cmp/cmp"
+)
 
 func TestGenerateName(t *testing.T) {
 	testCases := []struct {
@@ -48,6 +52,50 @@ func TestGenerateName(t *testing.T) {
 
 			if len(name) != int(tc.wantLength) {
 				t.Fatalf("unexpected length, name: %s", name)
+			}
+		})
+	}
+}
+
+func TestSliceDiff(t *testing.T) {
+	testCases := []struct {
+		name          string
+		oldSlice      []string
+		newSlice      []string
+		toDeleteSlice []string
+		toAddSlice    []string
+	}{
+		{
+			name:          "empty oldSlice",
+			oldSlice:      nil,
+			newSlice:      []string{"string1", "string2"},
+			toDeleteSlice: nil,
+			toAddSlice:    []string{"string1", "string2"},
+		},
+		{
+			name:          "empty newSlice",
+			oldSlice:      []string{"string1", "string2"},
+			newSlice:      nil,
+			toDeleteSlice: []string{"string1", "string2"},
+			toAddSlice:    nil,
+		},
+		{
+			name:          "mixed slice",
+			oldSlice:      []string{"string1", "string2"},
+			newSlice:      []string{"string2", "string3"},
+			toDeleteSlice: []string{"string1"},
+			toAddSlice:    []string{"string3"},
+		},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			gotDeleteSlice, gotAddSlice := SliceDiff(tc.oldSlice, tc.newSlice)
+			if diff := cmp.Diff(tc.toDeleteSlice, gotDeleteSlice); diff != "" {
+				t.Errorf("unexpected to delete slice, diff: %v", diff)
+			}
+			if diff := cmp.Diff(tc.toAddSlice, gotAddSlice); diff != "" {
+				t.Errorf("unexpected to add slice, diff: %v", diff)
 			}
 		})
 	}
