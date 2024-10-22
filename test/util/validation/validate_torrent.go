@@ -40,6 +40,13 @@ func ValidateTorrentStatusEqualTo(ctx context.Context, k8sClient client.Client, 
 			return errors.New("failed to get torrent")
 		}
 
+		if torrent.Status.Phase == nil {
+			return fmt.Errorf("status.phase should not be nil")
+		}
+		if *torrent.Status.Phase != conditionType {
+			return fmt.Errorf("unexpected status.phase, want %s, got %s", conditionType, *torrent.Status.Phase)
+		}
+
 		if condition := apimeta.FindStatusCondition(torrent.Status.Conditions, conditionType); condition == nil {
 			return fmt.Errorf("condition not found: %s", format.Object(torrent, 1))
 		} else {
@@ -60,21 +67,40 @@ func ValidateTorrentStatusEqualTo(ctx context.Context, k8sClient client.Client, 
 			}
 		}
 
-		if conditionType != api.DownloadConditionType {
-			return nil
-		}
+		return nil
+	}, util.Timeout, util.Interval).Should(gomega.Succeed())
+}
 
-		replications := api.ReplicationList{}
+func ValidateAllReplicationsNodeNameEqualTo(ctx context.Context, k8sClient client.Client, torrent *api.Torrent, nodeName string) {
+	gomega.Eventually(func() error {
+		replicationList := api.ReplicationList{}
 		selector := labels.SelectorFromSet(labels.Set{api.TorrentNameLabelKey: torrent.Name})
-		if err := k8sClient.List(ctx, &replications, &client.ListOptions{
+		if err := k8sClient.List(ctx, &replicationList, &client.ListOptions{
 			LabelSelector: selector,
 		}); err != nil {
 			return err
 		}
 
-		// TODO: refactor this part once we support multi-chunks per file.
-		// TODO: validate replicas
-
+		for _, replication := range replicationList.Items {
+			if replication.Name != nodeName {
+				return fmt.Errorf("unexpected nodeName, expected %s, got %s", nodeName, replication.Name)
+			}
+		}
 		return nil
 	}, util.Timeout, util.Interval).Should(gomega.Succeed())
+}
+
+func ValidateReplicationsNumberEqualTo(ctx context.Context, k8sClient client.Client, torrent *api.Torrent, number int) {
+	gomega.Eventually(func() bool {
+		replicationList := api.ReplicationList{}
+		selector := labels.SelectorFromSet(labels.Set{api.TorrentNameLabelKey: torrent.Name})
+		if err := k8sClient.List(ctx, &replicationList, &client.ListOptions{
+			LabelSelector: selector,
+		}); err != nil {
+			return false
+		}
+
+		return len(replicationList.Items) == number
+
+	}, util.Timeout, util.Interval).Should(gomega.BeTrue())
 }

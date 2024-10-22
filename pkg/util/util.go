@@ -40,3 +40,29 @@ func GenerateName(prefix string) (string, error) {
 
 	return prefix + "--" + suffix[0:suffixLength], nil
 }
+
+// toDelete includes string in old but not in new,
+// toAdd includes string in new but not in old.
+func SliceDiff(old []string, new []string) (toDelete []string, toAdd []string) {
+	for _, s := range old {
+		if !SliceIn(new, s) {
+			toDelete = append(toDelete, s)
+		}
+	}
+
+	for _, s := range new {
+		if !SliceIn(old, s) {
+			toAdd = append(toAdd, s)
+		}
+	}
+	return
+}
+
+func SliceIn(slice []string, value string) bool {
+	for _, v := range slice {
+		if v == value {
+			return true
+		}
+	}
+	return false
+}

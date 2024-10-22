@@ -64,11 +64,16 @@ const (
 type ReplicationStatus struct {
 	// Conditions represents the Torrent condition.
 	Conditions []metav1.Condition `json:"conditions,omitempty"`
+	// Phase represents the current state.
+	// +optional
+	Phase *string `json:"phase,omitempty"`
 }
 
 //+kubebuilder:object:root=true
 //+kubebuilder:subresource:status
 //+kubebuilder:resource:scope=Cluster
+//+kubebuilder:printcolumn:name="node",type=string,JSONPath=".spec.nodeName"
+//+kubebuilder:printcolumn:name="phase",type=string,JSONPath=".status.phase"
 
 // Replication is the Schema for the replications API
 type Replication struct {

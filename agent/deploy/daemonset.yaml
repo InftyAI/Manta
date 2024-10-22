@@ -23,7 +23,7 @@ spec:
             mountPath: /workspace/models
       containers:
       - name: agent
-        image: inftyai/manta-agent:1016-06
+        image: inftyai/manta-agent:1022-01
         ports:
         - containerPort: 8080
         resources:
@@ -36,6 +36,10 @@ spec:
           valueFrom:
             fieldRef:
               fieldPath: spec.nodeName
+        # Set the nodeTracker.spec.sizeLimit.
+        - name: SIZE_LIMIT
+          value: "990Mi"
+        # If you have GFW problem in china.
         - name: HF_ENDPOINT
           value: https://hf-mirror.com
         volumeMounts:

@@ -22,13 +22,13 @@ import (
 	api "github.com/inftyai/manta/api/v1alpha1"
 )
 
-type TorrentWrapper struct {
-	api.Torrent
+type NodeTrackerWrpper struct {
+	api.NodeTracker
 }
 
-func MakeTorrent(name string) *TorrentWrapper {
-	return &TorrentWrapper{
-		api.Torrent{
+func MakeNodeTracker(name string) *NodeTrackerWrpper {
+	return &NodeTrackerWrpper{
+		api.NodeTracker{
 			ObjectMeta: metav1.ObjectMeta{
 				Name: name,
 			},
@@ -36,33 +36,27 @@ func MakeTorrent(name string) *TorrentWrapper {
 	}
 }
 
-func (w *TorrentWrapper) Obj() *api.Torrent {
-	return &w.Torrent
+func (w *NodeTrackerWrpper) Obj() *api.NodeTracker {
+	return &w.NodeTracker
 }
 
-func (w *TorrentWrapper) ModelHub(name string, modelID string, filename string) *TorrentWrapper {
-	if w.Spec.ModelHub == nil {
-		w.Spec.ModelHub = &api.ModelHub{}
-	}
-	if name != "" {
-		w.Spec.ModelHub.Name = &name
-	}
-	w.Spec.ModelHub.ModelID = modelID
-	if filename != "" {
-		w.Spec.ModelHub.Filename = &filename
-	}
+func (w *NodeTrackerWrpper) Chunk(name string, size int64) *NodeTrackerWrpper {
+	w.Spec.Chunks = append(w.Spec.Chunks, api.ChunkTracker{
+		ChunkName: name,
+		SizeBytes: size,
+	})
 	return w
 }
 
-func (w *TorrentWrapper) Replicas(replicas int32) *TorrentWrapper {
-	w.Spec.Replicas = &replicas
+func (w *NodeTrackerWrpper) SizeLimit(value string) *NodeTrackerWrpper {
+	w.Spec.SizeLimit = &value
 	return w
 }
 
-func (w *TorrentWrapper) NodeSelector(k, v string) *TorrentWrapper {
-	if w.Spec.NodeSelector == nil {
-		w.Spec.NodeSelector = map[string]string{}
+func (w *NodeTrackerWrpper) Label(k, v string) *NodeTrackerWrpper {
+	if w.Labels == nil {
+		w.Labels = make(map[string]string)
 	}
-	w.Spec.NodeSelector[k] = v
+	w.Labels[k] = v
 	return w
 }

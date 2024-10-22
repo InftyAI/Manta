@@ -25,6 +25,7 @@ import (
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/klog/v2"
+	"k8s.io/utils/ptr"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller"
@@ -51,8 +52,8 @@ func NewReplicationReconciler(client client.Client, scheme *runtime.Scheme) *Rep
 	}
 }
 
-// For more details, check Reconcile and its Result here:
-// - https://pkg.go.dev/sigs.k8s.io/controller-runtime@v0.16.3/pkg/reconcile
+// Agent Replication reconciler only focuses on downloading and replicating process, not interested in the
+// Replication lifecycle management.
 func (r *ReplicationReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
 	logger := log.FromContext(ctx)
 
@@ -64,7 +65,6 @@ func (r *ReplicationReconciler) Reconcile(ctx context.Context, req ctrl.Request)
 	// Filter out unrelated events.
 	if replication.Spec.NodeName != NODE_NAME ||
 		replicationReady(replication) ||
-		replication.DeletionTimestamp != nil ||
 		len(replication.Status.Conditions) == 0 {
 		logger.V(10).Info("Skip replication", "Replication", klog.KObj(replication))
 		return ctrl.Result{}, nil
@@ -106,7 +106,10 @@ func (r *ReplicationReconciler) updateNodeTracker(ctx context.Context, replicati
 			return nil
 		}
 	}
-	nodeTracker.Spec.Chunks = append(nodeTracker.Spec.Chunks, api.ChunkTracker{ChunkName: chunkName})
+	nodeTracker.Spec.Chunks = append(nodeTracker.Spec.Chunks, api.ChunkTracker{
+		ChunkName: chunkName,
+		SizeBytes: replication.Spec.SizeBytes,
+	})
 	if err := r.Client.Update(ctx, nodeTracker); err != nil {
 		return err
 	}
@@ -129,6 +132,7 @@ func setReplicationCondition(replication *api.Replication, conditionType string)
 			Reason:  "Downloading",
 			Message: "Downloading chunks",
 		}
+		replication.Status.Phase = ptr.To[string](api.DownloadConditionType)
 		return apimeta.SetStatusCondition(&replication.Status.Conditions, condition)
 	}
 
@@ -139,6 +143,7 @@ func setReplicationCondition(replication *api.Replication, conditionType string)
 			Reason:  "Ready",
 			Message: "Download chunks successfully",
 		}
+		replication.Status.Phase = ptr.To[string](api.ReadyConditionType)
 		return apimeta.SetStatusCondition(&replication.Status.Conditions, condition)
 	}
 

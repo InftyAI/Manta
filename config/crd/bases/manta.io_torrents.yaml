@@ -14,7 +14,11 @@ spec:
     singular: torrent
   scope: Cluster
   versions:
-  - name: v1alpha1
+  - additionalPrinterColumns:
+    - jsonPath: .status.phase
+      name: Phase
+      type: string
+    name: v1alpha1
     schema:
       openAPIV3Schema:
         description: Torrent is the Schema for the torrents API
@@ -154,6 +158,9 @@ spec:
                   - type
                   type: object
                 type: array
+              phase:
+                description: Phase represents the current state.
+                type: string
               repo:
                 description: Repo tracks the objects belong to the source.
                 properties:
@@ -182,9 +189,8 @@ spec:
                                 type: integer
                               state:
                                 description: |-
-                                  State represents the state of the chunk, whether in downloading
-                                  or downloaded ready.
-                                  Note that once all the Replicas are replicated, the State will transmit into Ready.
+                                  State represents the state of the chunk, whether in pending or tracked already.
+                                  Chunks in Pending state will bring in Replication creations.
                                 type: string
                             required:
                             - name

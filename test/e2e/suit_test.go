@@ -85,7 +85,7 @@ func readyForTesting(client client.Client) {
 	By("waiting for webhooks to ready")
 
 	// To verify that webhooks are ready, let's create a simple torrent.
-	torrent := wrapper.MakeTorrent("torrent").ModelHub("Huggingface", "Qwen/Qwen2.5-7B-Instruct", "").Obj()
+	torrent := wrapper.MakeTorrent("torrent").ModelHub("Huggingface", "facebook/opt-125m", "").Obj()
 
 	// Once the creation succeeds, that means the webhooks are ready
 	// and we can begin testing.

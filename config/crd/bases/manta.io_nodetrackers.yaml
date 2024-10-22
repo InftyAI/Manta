@@ -53,10 +53,21 @@ spec:
                     chunkName:
                       description: ChunkName represents the name of the chunk.
                       type: string
+                    sizeBytes:
+                      description: SizeBytes represents the chunk size.
+                      format: int64
+                      type: integer
                   required:
                   - chunkName
+                  - sizeBytes
                   type: object
                 type: array
+              sizeLimit:
+                description: |-
+                  SizeLimit sets the maximum memory reserved for chunks.
+                  If nil, means no limit here, use the whole disk,
+                  use 1Tib instead right now.
+                type: string
             type: object
           status:
             description: NodeTrackerStatus defines the observed state of NodeTracker

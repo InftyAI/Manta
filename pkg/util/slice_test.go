@@ -114,3 +114,40 @@ func TestSetRemove(t *testing.T) {
 		})
 	}
 }
+
+func TestTopNIndices(t *testing.T) {
+	testCases := []struct {
+		name        string
+		slice       []float32
+		n           int
+		wantIndices []int32
+	}{
+		{
+			name:        "array length is less than n",
+			slice:       []float32{1, 3, 5, 2},
+			n:           5,
+			wantIndices: []int32{0, 1, 2, 3},
+		},
+		{
+			name:        "array length is larger than n",
+			slice:       []float32{1, 3, 5, 2},
+			n:           3,
+			wantIndices: []int32{2, 1, 3},
+		},
+		{
+			name:        "same value exists",
+			slice:       []float32{1, 3, 5, 2, 2},
+			n:           3,
+			wantIndices: []int32{2, 1, 3},
+		},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			gotIndices := TopNIndices(tc.slice, tc.n)
+			if diff := cmp.Diff(gotIndices, tc.wantIndices); diff != "" {
+				t.Errorf("unexpected diff: %v", diff)
+			}
+		})
+	}
+}

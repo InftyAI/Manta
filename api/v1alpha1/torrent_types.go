@@ -107,12 +107,11 @@ type ChunkStatus struct {
 	// - the object hash is 945c19bff66ba533eb2032a33dcc6281c4a1e032
 	// - the chunk is the second chunk of the total 10 chunks
 	Name string `json:"name"`
-	// State represents the state of the chunk, whether in downloading
-	// or downloaded ready.
-	// Note that once all the Replicas are replicated, the State will transmit into Ready.
-	State TrackerState `json:"state"`
 	// SizeBytes represents the chunk size.
 	SizeBytes int64 `json:"sizeBytes"`
+	// State represents the state of the chunk, whether in pending or tracked already.
+	// Chunks in Pending state will bring in Replication creations.
+	State TrackerState `json:"state"`
 }
 
 type ObjectType string
@@ -155,11 +154,15 @@ type TorrentStatus struct {
 	Conditions []metav1.Condition `json:"conditions,omitempty"`
 	// Repo tracks the objects belong to the source.
 	Repo *RepoStatus `json:"repo,omitempty"`
+	// Phase represents the current state.
+	// +optional
+	Phase *string `json:"phase,omitempty"`
 }
 
 //+kubebuilder:object:root=true
 //+kubebuilder:subresource:status
 //+kubebuilder:resource:scope=Cluster
+//+kubebuilder:printcolumn:name="Phase",type=string,JSONPath=".status.phase"
 
 // Torrent is the Schema for the torrents API
 type Torrent struct {

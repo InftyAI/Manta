@@ -35,6 +35,10 @@ import (
 	inftyaicomv1alpha1 "github.com/inftyai/manta/api/v1alpha1"
 	"github.com/inftyai/manta/pkg/cert"
 	"github.com/inftyai/manta/pkg/controller"
+	"github.com/inftyai/manta/pkg/dispatcher"
+	"github.com/inftyai/manta/pkg/dispatcher/framework"
+	"github.com/inftyai/manta/pkg/dispatcher/plugins/diskaware"
+	"github.com/inftyai/manta/pkg/dispatcher/plugins/nodeselector"
 	"github.com/inftyai/manta/pkg/webhook"
 	//+kubebuilder:scaffold:imports
 )
@@ -128,24 +132,32 @@ func setupControllers(mgr ctrl.Manager, certsReady chan struct{}) {
 	<-certsReady
 	setupLog.Info("certs ready")
 
-	if err := (&controller.ReplicationReconciler{
-		Client: mgr.GetClient(),
-		Scheme: mgr.GetScheme(),
-	}).SetupWithManager(mgr); err != nil {
+	dispatcher, err := dispatcher.NewDispatcher([]framework.RegisterFunc{nodeselector.New, diskaware.New}, []framework.RegisterFunc{})
+	if err != nil {
+		setupLog.Error(err, "unable to create dispatcher")
+		os.Exit(1)
+	}
+
+	if err := controller.NewReplicationReconciler(
+		mgr.GetClient(),
+		mgr.GetScheme(),
+	).SetupWithManager(mgr); err != nil {
 		setupLog.Error(err, "unable to create controller", "controller", "Replication")
 		os.Exit(1)
 	}
-	if err := (&controller.NodeTrackerReconciler{
-		Client: mgr.GetClient(),
-		Scheme: mgr.GetScheme(),
-	}).SetupWithManager(mgr); err != nil {
+	if err := controller.NewNodeTrackerReconciler(
+		mgr.GetClient(),
+		mgr.GetScheme(),
+		dispatcher,
+	).SetupWithManager(mgr); err != nil {
 		setupLog.Error(err, "unable to create controller", "controller", "NodeTracker")
 		os.Exit(1)
 	}
-	if err := (&controller.TorrentReconciler{
-		Client: mgr.GetClient(),
-		Scheme: mgr.GetScheme(),
-	}).SetupWithManager(mgr); err != nil {
+	if err := controller.NewTorrentReconciler(
+		mgr.GetClient(),
+		mgr.GetScheme(),
+		dispatcher,
+	).SetupWithManager(mgr); err != nil {
 		setupLog.Error(err, "unable to create controller", "controller", "Torrent")
 		os.Exit(1)
 	}
