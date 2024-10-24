@@ -74,13 +74,38 @@ func (r *TorrentReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ct
 
 	logger.Info("reconcile Torrent", "Torrent", klog.KObj(torrent))
 
-	if !torrent.DeletionTimestamp.IsZero() {
-		if *torrent.Spec.ReclaimPolicy == api.DeleteReclaimPolicy {
-			if err := r.dispatcher.CleanupReplications(ctx, torrent); err != nil {
+	// handling deletion.
+
+	if torrentDeleting(torrent) && *torrent.Spec.ReclaimPolicy == api.RetainReclaimPolicy {
+		if controllerutil.RemoveFinalizer(torrent, api.TorrentProtectionFinalizer) {
+			if err := r.Client.Update(ctx, torrent); err != nil {
 				return ctrl.Result{}, err
 			}
 		}
-		// Add a new condition once matched, remove the finalizer
+		return ctrl.Result{}, nil
+	}
+
+	if torrentDeleting(torrent) && *torrent.Spec.ReclaimPolicy == api.DeleteReclaimPolicy {
+		// TODO: make it possible in the future.
+		if !torrentReady(torrent) {
+			return ctrl.Result{}, fmt.Errorf("torrent not ready yet, delete it right now will lead to unexpected error")
+		}
+
+		replications, err := r.dispatcher.ReclaimReplications(ctx, torrent)
+		if err != nil {
+			return ctrl.Result{}, err
+		}
+		for _, rep := range replications {
+			// If Replication is duplicated, just ignore here.
+			// Another way is to update the chunk state to avoid conflicts as much as possible.
+			// Here we didn't adopt the method just because we're happy about the creations, they should not
+			// fail a lot.
+			if err := r.Client.Create(ctx, rep); err != nil && !errors.IsAlreadyExists(err) {
+				return ctrl.Result{}, err
+			}
+		}
+
+		// Once replications created, let's delete the Torrent, leave the cleanup work to Replication controller.
 		if controllerutil.RemoveFinalizer(torrent, api.TorrentProtectionFinalizer) {
 			if err := r.Client.Update(ctx, torrent); err != nil {
 				return ctrl.Result{}, err
@@ -88,6 +113,8 @@ func (r *TorrentReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ct
 			return ctrl.Result{}, nil
 		}
 	}
+
+	// handling torrent ready.
 
 	if torrentReady(torrent) {
 		logger.Info("start to delete replications since torrent is ready", "Torrent", klog.KObj(torrent))
@@ -108,6 +135,8 @@ func (r *TorrentReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ct
 		return ctrl.Result{}, nil
 	}
 
+	// handling torrent creation.
+
 	if controllerutil.AddFinalizer(torrent, api.TorrentProtectionFinalizer) {
 		if err := r.Client.Update(ctx, torrent); err != nil {
 			return ctrl.Result{}, err
@@ -115,12 +144,11 @@ func (r *TorrentReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ct
 		return ctrl.Result{}, nil
 	}
 
-	// Handle Pending status.
 	if torrent.Status.Repo == nil {
 		_ = setTorrentCondition(torrent, nil)
 
-		// TODO: We only support modelHub right now, we need to support spec.URI in the future as well.
-		objects, err := util.ListRepoObjects(torrent.Spec.ModelHub.ModelID, *torrent.Spec.ModelHub.Revision)
+		// TODO: We only support hub right now, we need to support spec.URI in the future as well.
+		objects, err := util.ListRepoObjects(torrent.Spec.Hub.RepoID, *torrent.Spec.Hub.Revision)
 		if err != nil {
 			return ctrl.Result{}, err
 		}
@@ -129,7 +157,7 @@ func (r *TorrentReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ct
 		return ctrl.Result{}, r.Client.Status().Update(ctx, torrent)
 	}
 
-	// Handle dispatch.
+	// handling dispatcher.
 
 	nodeTrackers := &api.NodeTrackerList{}
 	if err := r.List(ctx, nodeTrackers, &client.ListOptions{}); err != nil {
@@ -141,15 +169,14 @@ func (r *TorrentReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ct
 	if err != nil {
 		return ctrl.Result{}, err
 	}
-
-	if len(replications) > 0 {
-		for _, rep := range replications {
-			// If Replication is duplicated, just ignore here.
-			if err := r.Client.Create(ctx, rep); err != nil && !errors.IsAlreadyExists(err) {
-				return ctrl.Result{}, err
-			}
+	for _, rep := range replications {
+		// If Replication is duplicated, just ignore here.
+		if err := r.Client.Create(ctx, rep); err != nil && !errors.IsAlreadyExists(err) {
+			return ctrl.Result{}, err
 		}
 	}
+
+	// set the condition.
 
 	replicationList := api.ReplicationList{}
 	selector := labels.SelectorFromSet(labels.Set{api.TorrentNameLabelKey: torrent.Name})
@@ -159,7 +186,7 @@ func (r *TorrentReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ct
 		return ctrl.Result{}, err
 	}
 
-	conditionChanged := setTorrentCondition(torrent, &replicationList)
+	conditionChanged := setTorrentCondition(torrent, replicationList.Items)
 	if torrentStatusChanged || conditionChanged {
 		return ctrl.Result{}, r.Status().Update(ctx, torrent)
 	}
@@ -214,15 +241,19 @@ func (r *TorrentReconciler) SetupWithManager(mgr ctrl.Manager) error {
 		WithOptions(controller.Options{MaxConcurrentReconciles: 5}).
 		Watches(&api.Replication{}, handler.EnqueueRequestsFromMapFunc(mapFunc),
 			builder.WithPredicates(predicate.Funcs{
-				CreateFunc:  func(e event.CreateEvent) bool { return false },
-				UpdateFunc:  func(e event.UpdateEvent) bool { return true },
+				CreateFunc: func(e event.CreateEvent) bool { return false },
+				UpdateFunc: func(e event.UpdateEvent) bool {
+					replication := e.ObjectNew.(*api.Replication)
+					// Torrent controller doesn't care about deletion Replication.
+					return replication.Spec.Destination != nil
+				},
 				DeleteFunc:  func(e event.DeleteEvent) bool { return false },
 				GenericFunc: func(e event.GenericEvent) bool { return false },
 			})).
 		Complete(r)
 }
 
-func setTorrentCondition(torrent *api.Torrent, replicationList *api.ReplicationList) (changed bool) {
+func setTorrentCondition(torrent *api.Torrent, replications []api.Replication) (changed bool) {
 	if torrent.Status.Repo == nil {
 		condition := metav1.Condition{
 			Type:    api.PendingConditionType,
@@ -234,7 +265,7 @@ func setTorrentCondition(torrent *api.Torrent, replicationList *api.ReplicationL
 		return apimeta.SetStatusCondition(&torrent.Status.Conditions, condition)
 	}
 
-	if apimeta.IsStatusConditionTrue(torrent.Status.Conditions, api.DownloadConditionType) && replicationsReady(replicationList.Items) {
+	if apimeta.IsStatusConditionTrue(torrent.Status.Conditions, api.DownloadConditionType) && replicationsReady(replications) {
 		condition := metav1.Condition{
 			Type:    api.ReadyConditionType,
 			Status:  metav1.ConditionTrue,
@@ -245,7 +276,7 @@ func setTorrentCondition(torrent *api.Torrent, replicationList *api.ReplicationL
 		return apimeta.SetStatusCondition(&torrent.Status.Conditions, condition)
 	}
 
-	if torrentDownloading(replicationList) {
+	if torrentDownloading(replications) {
 		condition := metav1.Condition{
 			Type:    api.DownloadConditionType,
 			Status:  metav1.ConditionTrue,
@@ -259,8 +290,8 @@ func setTorrentCondition(torrent *api.Torrent, replicationList *api.ReplicationL
 	return false
 }
 
-func torrentDownloading(replicationList *api.ReplicationList) bool {
-	for _, replication := range replicationList.Items {
+func torrentDownloading(replications []api.Replication) bool {
+	for _, replication := range replications {
 		// If one replication is in downloading, then yes.
 		if apimeta.IsStatusConditionTrue(replication.Status.Conditions, api.DownloadConditionType) {
 			return true
@@ -286,15 +317,19 @@ func torrentReady(torrent *api.Torrent) bool {
 	return apimeta.IsStatusConditionTrue(torrent.Status.Conditions, api.ReadyConditionType)
 }
 
+func torrentDeleting(torrent *api.Torrent) bool {
+	return !torrent.DeletionTimestamp.IsZero()
+}
+
 // We have one chunk for one file for now.
 func constructRepoStatus(torrent *api.Torrent, objects []*util.ObjectBody) {
 	repo := &api.RepoStatus{}
 
-	if torrent.Spec.ModelHub.Filename != nil {
+	if torrent.Spec.Hub.Filename != nil {
 		// The repo could contain multiple objects(files) in the same directory, but
 		// we only need one file.
 		for _, obj := range objects {
-			if obj.Path == *torrent.Spec.ModelHub.Filename {
+			if obj.Path == *torrent.Spec.Hub.Filename {
 				chunks := []api.ChunkStatus{}
 				chunks = append(chunks, api.ChunkStatus{
 					// TODO: Each file only has one chunk for now.

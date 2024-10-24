@@ -106,6 +106,9 @@ func (r *ReplicationReconciler) updateNodeTracker(ctx context.Context, replicati
 			return nil
 		}
 	}
+	if replication.Spec.Destination == nil {
+		// TODO: Remove from nodeTracker.
+	}
 	nodeTracker.Spec.Chunks = append(nodeTracker.Spec.Chunks, api.ChunkTracker{
 		ChunkName: chunkName,
 		SizeBytes: replication.Spec.SizeBytes,

@@ -24,7 +24,7 @@ import (
 	"github.com/inftyai/manta/test/util/wrapper"
 )
 
-// TODO: once source modelHub != nil, it's address must not be nil.
+// TODO: once source.hub != nil, it's address must not be nil.
 // TODO: add validation to URI, must be <host>://<index>
 var _ = ginkgo.Describe("Replication default and validation", func() {
 
@@ -50,13 +50,13 @@ var _ = ginkgo.Describe("Replication default and validation", func() {
 				gomega.Expect(k8sClient.Create(ctx, tc.replication())).To(gomega.Succeed())
 			}
 		},
-		ginkgo.Entry("replication with modelHub set", &testValidatingCase{
+		ginkgo.Entry("replication with hub set", &testValidatingCase{
 			replication: func() *api.Replication {
-				return wrapper.MakeReplication("fake-replication").SourceOfModelHub("Huggingface", "Qwen/Qwen2-7B-Instruct", "", "").Obj()
+				return wrapper.MakeReplication("fake-replication").SourceOfHub("Huggingface", "Qwen/Qwen2-7B-Instruct", "", "").Obj()
 			},
 			failed: false,
 		}),
-		ginkgo.Entry("replication with modelHub and URI unset", &testValidatingCase{
+		ginkgo.Entry("replication with hub and URI unset", &testValidatingCase{
 			replication: func() *api.Replication {
 				replication := wrapper.MakeReplication("fake-replication").Obj()
 				return replication

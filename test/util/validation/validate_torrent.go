@@ -77,13 +77,13 @@ func ValidateTorrentStatusEqualTo(ctx context.Context, k8sClient client.Client, 
 			return fmt.Errorf("phase should be consistent with status condition type")
 		}
 
-		if torrent.Spec.ModelHub != nil && torrent.Spec.ModelHub.Filename != nil {
+		if torrent.Spec.Hub != nil && torrent.Spec.Hub.Filename != nil {
 			if torrent.Status.Repo == nil || len(torrent.Status.Repo.Objects) != 1 {
 				return fmt.Errorf("unexpected object length, should be equal to 1")
 			}
 		}
 
-		if torrent.Spec.ModelHub != nil && torrent.Spec.ModelHub.Filename == nil {
+		if torrent.Spec.Hub != nil && torrent.Spec.Hub.Filename == nil {
 			if torrent.Status.Repo == nil || len(torrent.Status.Repo.Objects) <= 1 {
 				return fmt.Errorf("unexpected file length, should be greater than 1")
 			}
@@ -95,8 +95,8 @@ func ValidateTorrentStatusEqualTo(ctx context.Context, k8sClient client.Client, 
 
 		for _, obj := range torrent.Status.Repo.Objects {
 			for _, chunk := range obj.Chunks {
-				if conditionType == api.ReadyConditionType && chunk.State != api.TrackedTrackerState {
-					return fmt.Errorf("once condition is Ready, chunk state must be Tracked")
+				if conditionType == api.ReadyConditionType && chunk.State != api.ReadyTrackerState {
+					return fmt.Errorf("once condition is Ready, chunk state must be Ready")
 				}
 			}
 		}

@@ -65,6 +65,11 @@ func (r *ReplicationReconciler) Reconcile(ctx context.Context, req ctrl.Request)
 	if setReplicationCondition(replication) {
 		return ctrl.Result{}, r.Status().Update(ctx, replication)
 	}
+
+	if replication.Spec.Destination == nil {
+		// TODO: Update nodeTracker.
+	}
+
 	return ctrl.Result{}, nil
 }
 

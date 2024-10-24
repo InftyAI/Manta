@@ -74,8 +74,8 @@ func (w *TorrentWebhook) generateValidate(obj runtime.Object) field.ErrorList {
 	specPath := field.NewPath("spec")
 
 	var allErrs field.ErrorList
-	if torrent.Spec.ModelHub == nil {
-		allErrs = append(allErrs, field.Forbidden(specPath.Child("modelHub"), "modelHub can't be null"))
+	if torrent.Spec.Hub == nil {
+		allErrs = append(allErrs, field.Forbidden(specPath.Child("hub"), "hub can't be null"))
 	}
 
 	return allErrs

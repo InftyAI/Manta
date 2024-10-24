@@ -30,10 +30,10 @@ type Target struct {
 	// Note: if it's a folder, all the files under the folder will be considered,
 	// otherwise, only one file will be replicated.
 	URI *string `json:"uri,omitempty"`
-	// ModelHub represents the model registry for model downloads.
-	// ModelHub and address are exclusive.
+	// Hub represents the model registry for model downloads.
+	// Hub and address are exclusive.
 	// +optional
-	ModelHub *ModelHub `json:"modelHub,omitempty"`
+	Hub *Hub `json:"hub,omitempty"`
 }
 
 // ReplicationSpec defines the desired state of Replication

@@ -43,10 +43,10 @@ spec:
           spec:
             description: TorrentSpec defines the desired state of Torrent
             properties:
-              modelHub:
+              hub:
                 description: |-
-                  ModelHub represents the model registry for model downloads.
-                  ModelHub and URI are exclusive.
+                  Hub represents the model registry for model downloads.
+                  Hub and URI are exclusive.
                 properties:
                   filename:
                     description: |-
@@ -55,16 +55,16 @@ spec:
                       the whole repo which includes all kinds of quantized models.
                       in the near future.
                     type: string
-                  modelID:
-                    description: |-
-                      ModelID refers to the model identifier on model hub,
-                      such as meta-llama/Meta-Llama-3-8B.
-                    type: string
                   name:
                     default: Huggingface
                     description: Name refers to the model registry, such as huggingface.
                     enum:
                     - Huggingface
+                    type: string
+                  repoID:
+                    description: |-
+                      RepoID refers to the identifier on hub,
+                      such as meta-llama/Meta-Llama-3-8B.
                     type: string
                   revision:
                     default: main
@@ -72,7 +72,7 @@ spec:
                       a branch name, a tag, or a commit hash.
                     type: string
                 required:
-                - modelID
+                - repoID
                 type: object
               nodeSelector:
                 additionalProperties:
@@ -189,8 +189,8 @@ spec:
                                 type: integer
                               state:
                                 description: |-
-                                  State represents the state of the chunk, whether in pending or tracked already.
-                                  Chunks in Pending state will bring in Replication creations.
+                                  State represents the state of the chunk, whether in Pending or Ready.
+                                  Chunks in Pending state will lead to Replication creation operations.
                                 type: string
                             required:
                             - name

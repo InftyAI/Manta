@@ -76,13 +76,13 @@ var _ = ginkgo.Describe("Torrent controller test", func() {
 				}
 			}
 		},
-		ginkgo.Entry("Torrent with modelHub repo create", &testValidatingCase{
+		ginkgo.Entry("Torrent with hub repo create", &testValidatingCase{
 			precondition: func() error {
 				nodeTracker := wrapper.MakeNodeTracker("node1").Obj()
 				return k8sClient.Create(ctx, nodeTracker)
 			},
 			makeTorrent: func() *api.Torrent {
-				return wrapper.MakeTorrent("qwen2-7b").ModelHub("Huggingface", "Qwen/Qwen2-7B-Instruct", "").Obj()
+				return wrapper.MakeTorrent("qwen2-7b").Hub("Huggingface", "Qwen/Qwen2-7B-Instruct", "").Obj()
 			},
 			updates: []*update{
 				{
@@ -114,13 +114,13 @@ var _ = ginkgo.Describe("Torrent controller test", func() {
 				},
 			},
 		}),
-		ginkgo.Entry("Torrent with modelHub file create", &testValidatingCase{
+		ginkgo.Entry("Torrent with hub file create", &testValidatingCase{
 			precondition: func() error {
 				nodeTracker := wrapper.MakeNodeTracker("node1").Obj()
 				return k8sClient.Create(ctx, nodeTracker)
 			},
 			makeTorrent: func() *api.Torrent {
-				return wrapper.MakeTorrent("qwen2-7b-gguf").ModelHub("Huggingface", "Qwen/Qwen2-0.5B-Instruct-GGUF", "qwen2-0_5b-instruct-q5_k_m.gguf").Obj()
+				return wrapper.MakeTorrent("qwen2-7b-gguf").Hub("Huggingface", "Qwen/Qwen2-0.5B-Instruct-GGUF", "qwen2-0_5b-instruct-q5_k_m.gguf").Obj()
 			},
 			updates: []*update{
 				{
@@ -158,7 +158,7 @@ var _ = ginkgo.Describe("Torrent controller test", func() {
 				return k8sClient.Create(ctx, nodeTracker)
 			},
 			makeTorrent: func() *api.Torrent {
-				return wrapper.MakeTorrent("qwen2-7b").Replicas(3).ModelHub("Huggingface", "Qwen/Qwen2-7B-Instruct", "").Obj()
+				return wrapper.MakeTorrent("qwen2-7b").Replicas(3).Hub("Huggingface", "Qwen/Qwen2-7B-Instruct", "").Obj()
 			},
 			updates: []*update{
 				{
@@ -202,7 +202,7 @@ var _ = ginkgo.Describe("Torrent controller test", func() {
 				return nil
 			},
 			makeTorrent: func() *api.Torrent {
-				return wrapper.MakeTorrent("qwen2-7b").Replicas(3).ModelHub("Huggingface", "Qwen/Qwen2-7B-Instruct", "").Obj()
+				return wrapper.MakeTorrent("qwen2-7b").Replicas(3).Hub("Huggingface", "Qwen/Qwen2-7B-Instruct", "").Obj()
 			},
 			updates: []*update{
 				{
@@ -246,7 +246,7 @@ var _ = ginkgo.Describe("Torrent controller test", func() {
 				return nil
 			},
 			makeTorrent: func() *api.Torrent {
-				return wrapper.MakeTorrent("qwen2-7b").Replicas(1).NodeSelector("zone", "zone1").ModelHub("Huggingface", "Qwen/Qwen2-7B-Instruct", "").Obj()
+				return wrapper.MakeTorrent("qwen2-7b").Replicas(1).NodeSelector("zone", "zone1").Hub("Huggingface", "Qwen/Qwen2-7B-Instruct", "").Obj()
 			},
 			updates: []*update{
 				{
@@ -290,7 +290,7 @@ var _ = ginkgo.Describe("Torrent controller test", func() {
 				return nil
 			},
 			makeTorrent: func() *api.Torrent {
-				return wrapper.MakeTorrent("qwen2-7b").Replicas(1).ModelHub("Huggingface", "Qwen/Qwen2-7B-Instruct", "").Obj()
+				return wrapper.MakeTorrent("qwen2-7b").Replicas(1).Hub("Huggingface", "Qwen/Qwen2-7B-Instruct", "").Obj()
 			},
 			updates: []*update{
 				{
@@ -334,7 +334,7 @@ var _ = ginkgo.Describe("Torrent controller test", func() {
 				return nil
 			},
 			makeTorrent: func() *api.Torrent {
-				return wrapper.MakeTorrent("qwen2-7b-gguf").ModelHub("Huggingface", "Qwen/Qwen2-0.5B-Instruct-GGUF", "qwen2-0_5b-instruct-q5_k_m.gguf").Obj()
+				return wrapper.MakeTorrent("qwen2-7b-gguf").Hub("Huggingface", "Qwen/Qwen2-0.5B-Instruct-GGUF", "qwen2-0_5b-instruct-q5_k_m.gguf").Obj()
 			},
 			updates: []*update{
 				{

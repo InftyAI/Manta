@@ -40,16 +40,16 @@ func (w *TorrentWrapper) Obj() *api.Torrent {
 	return &w.Torrent
 }
 
-func (w *TorrentWrapper) ModelHub(name string, modelID string, filename string) *TorrentWrapper {
-	if w.Spec.ModelHub == nil {
-		w.Spec.ModelHub = &api.ModelHub{}
+func (w *TorrentWrapper) Hub(name string, repoID string, filename string) *TorrentWrapper {
+	if w.Spec.Hub == nil {
+		w.Spec.Hub = &api.Hub{}
 	}
 	if name != "" {
-		w.Spec.ModelHub.Name = &name
+		w.Spec.Hub.Name = &name
 	}
-	w.Spec.ModelHub.ModelID = modelID
+	w.Spec.Hub.RepoID = repoID
 	if filename != "" {
-		w.Spec.ModelHub.Filename = &filename
+		w.Spec.Hub.Filename = &filename
 	}
 	return w
 }

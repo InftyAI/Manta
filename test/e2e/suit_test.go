@@ -84,7 +84,7 @@ func readyForTesting(client client.Client) {
 		NodeName("unknown-node").
 		ChunkName("chunk1").
 		SizeBytes(1024).
-		SourceOfModelHub("Huggingface", "facebook/opt-125m", "main", "").
+		SourceOfHub("Huggingface", "facebook/opt-125m", "main", "").
 		Obj()
 
 	// Once the creation succeeds, that means the webhooks are ready
