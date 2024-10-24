@@ -98,7 +98,7 @@ type TrackerState string
 
 const (
 	PendingTrackerState TrackerState = "Pending"
-	TrackedTrackerState TrackerState = "Tracked"
+	ReadyTrackerState   TrackerState = "Ready"
 )
 
 type ChunkStatus struct {
@@ -110,8 +110,8 @@ type ChunkStatus struct {
 	Name string `json:"name"`
 	// SizeBytes represents the chunk size.
 	SizeBytes int64 `json:"sizeBytes"`
-	// State represents the state of the chunk, whether in pending or tracked already.
-	// Chunks in Pending state will bring in Replication creations.
+	// State represents the state of the chunk, whether in Pending or Ready.
+	// Chunks in Pending state will lead to Replication creation operations.
 	State TrackerState `json:"state"`
 }
 

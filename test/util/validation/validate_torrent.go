@@ -95,8 +95,8 @@ func ValidateTorrentStatusEqualTo(ctx context.Context, k8sClient client.Client, 
 
 		for _, obj := range torrent.Status.Repo.Objects {
 			for _, chunk := range obj.Chunks {
-				if conditionType == api.ReadyConditionType && chunk.State != api.TrackedTrackerState {
-					return fmt.Errorf("once condition is Ready, chunk state must be Tracked")
+				if conditionType == api.ReadyConditionType && chunk.State != api.ReadyTrackerState {
+					return fmt.Errorf("once condition is Ready, chunk state must be Ready")
 				}
 			}
 		}
