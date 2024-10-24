@@ -37,11 +37,11 @@ func HandleReplication(logger logr.Logger, replication *api.Replication) error {
 
 	var localPath, revision, filename, targetPath string
 
-	// If modelHub != nil, it must be download to the localhost.
-	if replication.Spec.Source.ModelHub != nil {
+	// If hub != nil, it must be download to the localhost.
+	if replication.Spec.Source.Hub != nil {
 		_, localPath = parseURI(*replication.Spec.Destination.URI)
-		revision = *replication.Spec.Source.ModelHub.Revision
-		filename = *replication.Spec.Source.ModelHub.Filename
+		revision = *replication.Spec.Source.Hub.Revision
+		filename = *replication.Spec.Source.Hub.Filename
 		splits := strings.Split(localPath, "/blobs/")
 		targetPath = splits[0] + "/snapshots/" + revision + "/" + filename
 
@@ -51,9 +51,9 @@ func HandleReplication(logger logr.Logger, replication *api.Replication) error {
 			return nil
 		}
 
-		if *replication.Spec.Source.ModelHub.Name == api.HUGGINGFACE_MODEL_HUB {
+		if *replication.Spec.Source.Hub.Name == api.HUGGINGFACE_MODEL_HUB {
 			logger.Info("Start to download file from Huggingface Hub", "file", filename)
-			if err := downloadFromHF(replication.Spec.Source.ModelHub.ModelID, revision, filename, localPath); err != nil {
+			if err := downloadFromHF(replication.Spec.Source.Hub.RepoID, revision, filename, localPath); err != nil {
 				return err
 			}
 			// TODO: handle modelScope

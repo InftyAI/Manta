@@ -56,20 +56,20 @@ func (w *ReplicationWrapper) SizeBytes(size int64) *ReplicationWrapper {
 }
 
 // Only one tuple be default.
-func (w *ReplicationWrapper) SourceOfModelHub(name, modelID, revision, filename string) *ReplicationWrapper {
+func (w *ReplicationWrapper) SourceOfHub(name, repoID, revision, filename string) *ReplicationWrapper {
 	source := api.Target{
-		ModelHub: &api.ModelHub{
-			ModelID: modelID,
+		Hub: &api.Hub{
+			RepoID: repoID,
 		},
 	}
 	if name != "" {
-		source.ModelHub.Name = &name
+		source.Hub.Name = &name
 	}
 	if revision != "" {
-		source.ModelHub.Revision = &revision
+		source.Hub.Revision = &revision
 	}
 	if filename != "" {
-		source.ModelHub.Filename = &filename
+		source.Hub.Filename = &filename
 	}
 
 	w.Spec.Source = source

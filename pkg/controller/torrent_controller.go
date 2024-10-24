@@ -119,8 +119,8 @@ func (r *TorrentReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ct
 	if torrent.Status.Repo == nil {
 		_ = setTorrentCondition(torrent, nil)
 
-		// TODO: We only support modelHub right now, we need to support spec.URI in the future as well.
-		objects, err := util.ListRepoObjects(torrent.Spec.ModelHub.ModelID, *torrent.Spec.ModelHub.Revision)
+		// TODO: We only support hub right now, we need to support spec.URI in the future as well.
+		objects, err := util.ListRepoObjects(torrent.Spec.Hub.RepoID, *torrent.Spec.Hub.Revision)
 		if err != nil {
 			return ctrl.Result{}, err
 		}
@@ -290,11 +290,11 @@ func torrentReady(torrent *api.Torrent) bool {
 func constructRepoStatus(torrent *api.Torrent, objects []*util.ObjectBody) {
 	repo := &api.RepoStatus{}
 
-	if torrent.Spec.ModelHub.Filename != nil {
+	if torrent.Spec.Hub.Filename != nil {
 		// The repo could contain multiple objects(files) in the same directory, but
 		// we only need one file.
 		for _, obj := range objects {
-			if obj.Path == *torrent.Spec.ModelHub.Filename {
+			if obj.Path == *torrent.Spec.Hub.Filename {
 				chunks := []api.ChunkStatus{}
 				chunks = append(chunks, api.ChunkStatus{
 					// TODO: Each file only has one chunk for now.

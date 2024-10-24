@@ -48,21 +48,21 @@ var _ = ginkgo.Describe("Torrent default and validation", func() {
 				gomega.Expect(k8sClient.Create(ctx, tc.torrent())).To(gomega.Succeed())
 			}
 		},
-		ginkgo.Entry("torrent modelHub set", &testValidatingCase{
+		ginkgo.Entry("torrent hub set", &testValidatingCase{
 			torrent: func() *api.Torrent {
-				return wrapper.MakeTorrent("download-qwen").ModelHub("Huggingface", "Qwen/Qwen2-7B-Instruct", "").Obj()
+				return wrapper.MakeTorrent("download-qwen").Hub("Huggingface", "Qwen/Qwen2-7B-Instruct", "").Obj()
 			},
 			failed: false,
 		}),
-		ginkgo.Entry("torrent modelHub not set", &testValidatingCase{
+		ginkgo.Entry("torrent hub not set", &testValidatingCase{
 			torrent: func() *api.Torrent {
 				return wrapper.MakeTorrent("download-qwen").Obj()
 			},
 			failed: true,
 		}),
-		ginkgo.Entry("unknown modelHub not supported", &testValidatingCase{
+		ginkgo.Entry("unknown hub not supported", &testValidatingCase{
 			torrent: func() *api.Torrent {
-				return wrapper.MakeTorrent("download-qwen").ModelHub("ModelScope", "Qwen/Qwen2-7B-Instruct", "").Obj()
+				return wrapper.MakeTorrent("download-qwen").Hub("ModelScope", "Qwen/Qwen2-7B-Instruct", "").Obj()
 			},
 			failed: true,
 		}),

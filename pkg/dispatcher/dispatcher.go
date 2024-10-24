@@ -214,12 +214,12 @@ func chunkIn(chunks []api.ChunkTracker, chunk api.ChunkTracker) bool {
 }
 
 func buildReplication(torrent *api.Torrent, chunk framework.ChunkInfo, index int, nodeName string) (*api.Replication, error) {
-	// Support modelHub only right now.
-	if torrent.Spec.ModelHub == nil {
+	// Support hub only right now.
+	if torrent.Spec.Hub == nil {
 		return nil, errors.New("unimplemented")
 	}
 
-	repoName := repoName(torrent.Spec.ModelHub)
+	repoName := repoName(torrent.Spec.Hub)
 
 	return &api.Replication{
 		TypeMeta: v1.TypeMeta{
@@ -246,12 +246,12 @@ func buildReplication(torrent *api.Torrent, chunk framework.ChunkInfo, index int
 			NodeName:  nodeName,
 			ChunkName: chunk.Name,
 			Source: api.Target{
-				ModelHub: &api.ModelHub{
-					Name:    torrent.Spec.ModelHub.Name,
-					ModelID: torrent.Spec.ModelHub.ModelID,
+				Hub: &api.Hub{
+					Name:   torrent.Spec.Hub.Name,
+					RepoID: torrent.Spec.Hub.RepoID,
 					// TODO: support multiple chunks for one file in the future.
 					Filename: &chunk.Path,
-					Revision: torrent.Spec.ModelHub.Revision,
+					Revision: torrent.Spec.Hub.Revision,
 				},
 			},
 			Destination: &api.Target{
@@ -262,6 +262,6 @@ func buildReplication(torrent *api.Torrent, chunk framework.ChunkInfo, index int
 	}, nil
 }
 
-func repoName(modelHub *api.ModelHub) string {
-	return strings.ReplaceAll(modelHub.ModelID, "/", "--")
+func repoName(hub *api.Hub) string {
+	return strings.ReplaceAll(hub.RepoID, "/", "--")
 }

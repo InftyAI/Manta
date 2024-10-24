@@ -51,7 +51,7 @@ var _ = ginkgo.Describe("torrent e2e test", func() {
 	})
 
 	ginkgo.It("Can download a model successfully", func() {
-		torrent := wrapper.MakeTorrent("facebook-opt-125m").ModelHub("Huggingface", "facebook/opt-125m", "").Obj()
+		torrent := wrapper.MakeTorrent("facebook-opt-125m").Hub("Huggingface", "facebook/opt-125m", "").Obj()
 		gomega.Expect(k8sClient.Create(ctx, torrent)).To(gomega.Succeed())
 		defer func() {
 			gomega.Expect(k8sClient.Delete(ctx, torrent)).To(gomega.Succeed())
@@ -62,7 +62,7 @@ var _ = ginkgo.Describe("torrent e2e test", func() {
 	})
 
 	// ginkgo.It("Can download a model with nodeSelector configured", func() {
-	// 	torrent := wrapper.MakeTorrent("facebook-opt-125m").ModelHub("Huggingface", "facebook/opt-125m", "").NodeSelector("kubernetes.io/hostname", "kind-worker2").Obj()
+	// 	torrent := wrapper.MakeTorrent("facebook-opt-125m").Hub("Huggingface", "facebook/opt-125m", "").NodeSelector("kubernetes.io/hostname", "kind-worker2").Obj()
 	// 	gomega.Expect(k8sClient.Create(ctx, torrent)).To(gomega.Succeed())
 	// 	defer func() {
 	// 		gomega.Expect(k8sClient.Delete(ctx, torrent)).To(gomega.Succeed())

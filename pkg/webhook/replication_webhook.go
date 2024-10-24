@@ -75,11 +75,11 @@ func (w *ReplicationWebhook) generateValidate(obj runtime.Object) field.ErrorLis
 
 	var allErrs field.ErrorList
 
-	if replication.Spec.Destination != nil && replication.Spec.Destination.ModelHub == nil && replication.Spec.Destination.URI == nil {
-		allErrs = append(allErrs, field.Forbidden(specPath.Child("destination"), "modelHub and URI couldn't be both null in Destination"))
+	if replication.Spec.Destination != nil && replication.Spec.Destination.Hub == nil && replication.Spec.Destination.URI == nil {
+		allErrs = append(allErrs, field.Forbidden(specPath.Child("destination"), "hub and URI couldn't be both null in Destination"))
 	}
-	if replication.Spec.Source.ModelHub == nil && replication.Spec.Source.URI == nil {
-		allErrs = append(allErrs, field.Forbidden(specPath.Child("source"), "modelHub and URI couldn't be both null in Source"))
+	if replication.Spec.Source.Hub == nil && replication.Spec.Source.URI == nil {
+		allErrs = append(allErrs, field.Forbidden(specPath.Child("source"), "hub and URI couldn't be both null in Source"))
 	}
 	return allErrs
 }

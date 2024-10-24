@@ -54,10 +54,10 @@ spec:
                   Destination represents the destination of the file.
                   If destination is nil, it means to delete the file.
                 properties:
-                  modelHub:
+                  hub:
                     description: |-
-                      ModelHub represents the model registry for model downloads.
-                      ModelHub and address are exclusive.
+                      Hub represents the model registry for model downloads.
+                      Hub and address are exclusive.
                     properties:
                       filename:
                         description: |-
@@ -66,16 +66,16 @@ spec:
                           the whole repo which includes all kinds of quantized models.
                           in the near future.
                         type: string
-                      modelID:
-                        description: |-
-                          ModelID refers to the model identifier on model hub,
-                          such as meta-llama/Meta-Llama-3-8B.
-                        type: string
                       name:
                         default: Huggingface
                         description: Name refers to the model registry, such as huggingface.
                         enum:
                         - Huggingface
+                        type: string
+                      repoID:
+                        description: |-
+                          RepoID refers to the identifier on hub,
+                          such as meta-llama/Meta-Llama-3-8B.
                         type: string
                       revision:
                         default: main
@@ -83,7 +83,7 @@ spec:
                           be a branch name, a tag, or a commit hash.
                         type: string
                     required:
-                    - modelID
+                    - repoID
                     type: object
                   uri:
                     description: "URI represents the file address with different storages,
@@ -105,10 +105,10 @@ spec:
                   Source represents the source file.
                   Source couldn't be nil.
                 properties:
-                  modelHub:
+                  hub:
                     description: |-
-                      ModelHub represents the model registry for model downloads.
-                      ModelHub and address are exclusive.
+                      Hub represents the model registry for model downloads.
+                      Hub and address are exclusive.
                     properties:
                       filename:
                         description: |-
@@ -117,16 +117,16 @@ spec:
                           the whole repo which includes all kinds of quantized models.
                           in the near future.
                         type: string
-                      modelID:
-                        description: |-
-                          ModelID refers to the model identifier on model hub,
-                          such as meta-llama/Meta-Llama-3-8B.
-                        type: string
                       name:
                         default: Huggingface
                         description: Name refers to the model registry, such as huggingface.
                         enum:
                         - Huggingface
+                        type: string
+                      repoID:
+                        description: |-
+                          RepoID refers to the identifier on hub,
+                          such as meta-llama/Meta-Llama-3-8B.
                         type: string
                       revision:
                         default: main
@@ -134,7 +134,7 @@ spec:
                           be a branch name, a tag, or a commit hash.
                         type: string
                     required:
-                    - modelID
+                    - repoID
                     type: object
                   uri:
                     description: "URI represents the file address with different storages,
