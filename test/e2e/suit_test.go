@@ -18,7 +18,6 @@ package e2e
 import (
 	"context"
 	"testing"
-	"time"
 
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
@@ -34,12 +33,8 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/log/zap"
 
 	api "github.com/inftyai/manta/api/v1alpha1"
+	"github.com/inftyai/manta/test/util"
 	"github.com/inftyai/manta/test/util/wrapper"
-)
-
-const (
-	timeout  = 60 * time.Second
-	interval = time.Millisecond * 250
 )
 
 var cfg *rest.Config
@@ -84,18 +79,23 @@ var _ = AfterSuite(func() {
 func readyForTesting(client client.Client) {
 	By("waiting for webhooks to ready")
 
-	// To verify that webhooks are ready, let's create a simple torrent.
-	torrent := wrapper.MakeTorrent("torrent").ModelHub("Huggingface", "facebook/opt-125m", "").Obj()
+	// To verify that webhooks are ready, let's create a simple Replication.
+	replication := wrapper.MakeReplication("sample-replication").
+		NodeName("unknown-node").
+		ChunkName("chunk1").
+		SizeBytes(1024).
+		SourceOfModelHub("Huggingface", "facebook/opt-125m", "main", "").
+		Obj()
 
 	// Once the creation succeeds, that means the webhooks are ready
 	// and we can begin testing.
 	Eventually(func() error {
-		return client.Create(ctx, torrent)
-	}, timeout, interval).Should(Succeed())
+		return client.Create(ctx, replication)
+	}, util.Timeout, util.Interval).Should(Succeed())
 
-	// Delete this model before beginning tests.
-	Expect(client.Delete(ctx, torrent))
+	// Delete this replication before beginning tests.
+	Expect(client.Delete(ctx, replication))
 	Eventually(func() error {
-		return client.Get(ctx, types.NamespacedName{Name: torrent.Name}, &api.Torrent{})
+		return client.Get(ctx, types.NamespacedName{Name: replication.Name}, &api.Replication{})
 	}).ShouldNot(Succeed())
 }

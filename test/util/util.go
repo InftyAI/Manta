@@ -18,11 +18,15 @@ package util
 
 import (
 	"context"
+	"fmt"
+	"os"
 
 	"github.com/onsi/gomega"
 	apimeta "k8s.io/apimachinery/pkg/api/meta"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/labels"
+	"k8s.io/apimachinery/pkg/runtime/serializer/yaml"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	api "github.com/inftyai/manta/api/v1alpha1"
@@ -78,4 +82,52 @@ func TorrentChunkNumber(torrent *api.Torrent) (number int) {
 		number += len(obj.Chunks)
 	}
 	return number
+}
+
+func Apply(ctx context.Context, k8sClient client.Client, path string, ns string, action string) error {
+	entries, err := os.ReadDir(path)
+	if err != nil {
+		return err
+	}
+
+	for _, entry := range entries {
+		if err := applyYaml(ctx, k8sClient, path+"/"+entry.Name(), ns, action); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+func applyYaml(ctx context.Context, k8sClient client.Client, file string, ns string, action string) error {
+	yamlFile, err := os.ReadFile(file)
+	if err != nil {
+		return fmt.Errorf("failed to read YAML file: %v", err)
+	}
+
+	decode := yaml.NewDecodingSerializer(unstructured.UnstructuredJSONScheme)
+	obj := &unstructured.Unstructured{}
+	_, _, err = decode.Decode(yamlFile, nil, obj)
+	if err != nil {
+		return fmt.Errorf("failed to decode YAML into Unstructured object: %v", err)
+	}
+
+	if ns != "" {
+		obj.SetNamespace(ns)
+	}
+
+	if action == "create" {
+		if err = k8sClient.Create(ctx, obj); err != nil {
+			return fmt.Errorf("failed to create resource: %v", err)
+		}
+		return nil
+	}
+
+	if action == "delete" {
+		if err = k8sClient.Delete(ctx, obj); err != nil {
+			return fmt.Errorf("failed to delete resource: %v", err)
+		}
+		return nil
+	}
+
+	return nil
 }

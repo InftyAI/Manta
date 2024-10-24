@@ -20,6 +20,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"time"
 
 	"github.com/onsi/gomega"
 	"github.com/onsi/gomega/format"
@@ -34,7 +35,24 @@ import (
 	"github.com/inftyai/manta/test/util"
 )
 
-func ValidateTorrentStatusEqualTo(ctx context.Context, k8sClient client.Client, torrent *api.Torrent, conditionType string, reason string, status metav1.ConditionStatus) {
+type ValidateOptions struct {
+	Timeout  time.Duration
+	Interval time.Duration
+}
+
+func ValidateTorrentStatusEqualTo(ctx context.Context, k8sClient client.Client, torrent *api.Torrent, conditionType string, reason string, status metav1.ConditionStatus, option *ValidateOptions) {
+	timeout := util.Timeout
+	interval := util.Interval
+
+	if option != nil {
+		if option.Timeout != time.Duration(0) {
+			timeout = option.Timeout
+		}
+		if option.Interval != time.Duration(0) {
+			interval = option.Interval
+		}
+	}
+
 	gomega.Eventually(func() error {
 		if err := k8sClient.Get(ctx, types.NamespacedName{Name: torrent.Name}, torrent); err != nil {
 			return errors.New("failed to get torrent")
@@ -55,6 +73,10 @@ func ValidateTorrentStatusEqualTo(ctx context.Context, k8sClient client.Client, 
 			}
 		}
 
+		if *torrent.Status.Phase != conditionType {
+			return fmt.Errorf("phase should be consistent with status condition type")
+		}
+
 		if torrent.Spec.ModelHub != nil && torrent.Spec.ModelHub.Filename != nil {
 			if torrent.Status.Repo == nil || len(torrent.Status.Repo.Objects) != 1 {
 				return fmt.Errorf("unexpected object length, should be equal to 1")
@@ -67,8 +89,20 @@ func ValidateTorrentStatusEqualTo(ctx context.Context, k8sClient client.Client, 
 			}
 		}
 
+		if torrent.Status.Repo == nil {
+			return fmt.Errorf("status.repo should not be nil")
+		}
+
+		for _, obj := range torrent.Status.Repo.Objects {
+			for _, chunk := range obj.Chunks {
+				if conditionType == api.ReadyConditionType && chunk.State != api.TrackedTrackerState {
+					return fmt.Errorf("once condition is Ready, chunk state must be Tracked")
+				}
+			}
+		}
+
 		return nil
-	}, util.Timeout, util.Interval).Should(gomega.Succeed())
+	}, timeout, interval).Should(gomega.Succeed())
 }
 
 func ValidateAllReplicationsNodeNameEqualTo(ctx context.Context, k8sClient client.Client, torrent *api.Torrent, nodeName string) {

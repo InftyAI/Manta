@@ -67,7 +67,7 @@ func (ds *DiskAware) Score(ctx context.Context, chunk framework.ChunkInfo, nodeT
 	}
 
 	sizeLimit := sizeLimit(nodeTracker)
-	return (1 - float32(totalSize)/float32(sizeLimit)) * 100
+	return (1 - float32(totalSize+chunk.Size)/float32(sizeLimit)) * 100
 }
 
 func sizeLimit(nt api.NodeTracker) int64 {

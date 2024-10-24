@@ -1,0 +1,12 @@
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: manta-agent-binding
+subjects:
+- kind: ServiceAccount
+  name: manta-agent
+  namespace: manta-system
+roleRef:
+  kind: ClusterRole
+  name: manta-agent-role
+  apiGroup: rbac.authorization.k8s.io

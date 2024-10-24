@@ -32,7 +32,8 @@ import (
 )
 
 const (
-	localHost = "localhost://"
+	localHost        = "localhost://"
+	defaultWorkspace = "/workspace/models/"
 )
 
 // DefaultDownloader helps to download the chunks.
@@ -135,6 +136,13 @@ func (d *Dispatcher) PrepareReplications(ctx context.Context, torrent *api.Torre
 		}
 	}
 	return replications, torrentStatusChanged, nil
+}
+
+func (d *Dispatcher) CleanupReplications(ctx context.Context, torrent *api.Torrent) (err error) {
+	if torrent.Status.Repo == nil {
+		return nil
+	}
+	return nil
 }
 
 func (d *Dispatcher) syncChunk() (replications []*api.Replication, err error) {
@@ -247,7 +255,7 @@ func buildReplication(torrent *api.Torrent, chunk framework.ChunkInfo, index int
 				},
 			},
 			Destination: &api.Target{
-				URI: ptr.To[string](localHost + api.DefaultWorkspace + repoName + "/blobs/" + chunk.Name),
+				URI: ptr.To[string](localHost + defaultWorkspace + repoName + "/blobs/" + chunk.Name),
 			},
 			SizeBytes: chunk.Size,
 		},

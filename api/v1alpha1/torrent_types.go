@@ -21,8 +21,9 @@ import (
 )
 
 const (
-	TorrentNameLabelKey   = "manta.io/torrent-name"
-	DefaultWorkspace      = "/workspace/models/"
+	TorrentNameLabelKey        = "manta.io/torrent-name"
+	TorrentProtectionFinalizer = "manta.io/torrent-protect"
+
 	HUGGINGFACE_MODEL_HUB = "Huggingface"
 )
 
