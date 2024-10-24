@@ -36,7 +36,7 @@ func (ns *NodeSelector) Name() string {
 	return "NodeSelector"
 }
 
-func (ns *NodeSelector) Filter(ctx context.Context, chunk framework.ChunkInfo, nodeTracker api.NodeTracker, cache *cache.Cache) framework.Status {
+func (ns *NodeSelector) Filter(ctx context.Context, chunk framework.ChunkInfo, nodeTracker api.NodeTracker, _ *cache.Cache) framework.Status {
 	// In a big cluster, this is really headache maybe we should have a preFilter extension point.
 	for k, v := range chunk.NodeSelector {
 		value, ok := nodeTracker.Labels[k]

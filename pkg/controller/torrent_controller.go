@@ -32,6 +32,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/builder"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller"
+	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 	"sigs.k8s.io/controller-runtime/pkg/event"
 	"sigs.k8s.io/controller-runtime/pkg/handler"
 	"sigs.k8s.io/controller-runtime/pkg/log"
@@ -73,6 +74,21 @@ func (r *TorrentReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ct
 
 	logger.Info("reconcile Torrent", "Torrent", klog.KObj(torrent))
 
+	if !torrent.DeletionTimestamp.IsZero() {
+		if *torrent.Spec.ReclaimPolicy == api.DeleteReclaimPolicy {
+			if err := r.dispatcher.CleanupReplications(ctx, torrent); err != nil {
+				return ctrl.Result{}, err
+			}
+		}
+		// Add a new condition once matched, remove the finalizer
+		if controllerutil.RemoveFinalizer(torrent, api.TorrentProtectionFinalizer) {
+			if err := r.Client.Update(ctx, torrent); err != nil {
+				return ctrl.Result{}, err
+			}
+			return ctrl.Result{}, nil
+		}
+	}
+
 	if torrentReady(torrent) {
 		logger.Info("start to delete replications since torrent is ready", "Torrent", klog.KObj(torrent))
 
@@ -88,6 +104,13 @@ func (r *TorrentReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ct
 			if err := r.Client.Delete(ctx, &replication); err != nil {
 				return ctrl.Result{}, err
 			}
+		}
+		return ctrl.Result{}, nil
+	}
+
+	if controllerutil.AddFinalizer(torrent, api.TorrentProtectionFinalizer) {
+		if err := r.Client.Update(ctx, torrent); err != nil {
+			return ctrl.Result{}, err
 		}
 		return ctrl.Result{}, nil
 	}
@@ -156,11 +179,11 @@ func (r *TorrentReconciler) Create(e event.CreateEvent) bool {
 	return true
 }
 
-func (r *TorrentReconciler) Delete(e event.DeleteEvent) bool {
+func (r *TorrentReconciler) Update(e event.UpdateEvent) bool {
 	return true
 }
 
-func (r *TorrentReconciler) Update(e event.UpdateEvent) bool {
+func (r *TorrentReconciler) Delete(e event.DeleteEvent) bool {
 	return true
 }
 

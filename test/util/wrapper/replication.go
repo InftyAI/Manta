@@ -45,6 +45,16 @@ func (w *ReplicationWrapper) NodeName(name string) *ReplicationWrapper {
 	return w
 }
 
+func (w *ReplicationWrapper) ChunkName(name string) *ReplicationWrapper {
+	w.Spec.ChunkName = name
+	return w
+}
+
+func (w *ReplicationWrapper) SizeBytes(size int64) *ReplicationWrapper {
+	w.Spec.SizeBytes = size
+	return w
+}
+
 // Only one tuple be default.
 func (w *ReplicationWrapper) SourceOfModelHub(name, modelID, revision, filename string) *ReplicationWrapper {
 	source := api.Target{
