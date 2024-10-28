@@ -35,13 +35,13 @@ func TestCacheOP(t *testing.T) {
 		SizeBytes: 2,
 	}
 
-	if _, ok := cache.ChunkExist(chunk1.ChunkName); ok {
+	if cache.ChunkExist(chunk1.ChunkName) {
 		t.Error("chunk1 should not exist")
 	}
 
 	cache.AddChunks([]api.ChunkTracker{chunk1, chunk2}, "node1")
 
-	if _, ok := cache.ChunkExist(chunk1.ChunkName); !ok {
+	if !cache.ChunkExist(chunk1.ChunkName) {
 		t.Error("chunk1 should exist")
 	}
 

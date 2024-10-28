@@ -17,32 +17,42 @@ limitations under the License.
 package handler
 
 import (
+	"context"
 	"fmt"
 	"os"
 	"path/filepath"
 	"strings"
 
-	"github.com/go-logr/logr"
+	"k8s.io/klog/v2"
+	"sigs.k8s.io/controller-runtime/pkg/log"
 
 	api "github.com/inftyai/manta/api/v1alpha1"
 )
 
 // This only happens when replication not ready.
-func HandleReplication(logger logr.Logger, replication *api.Replication) error {
+func HandleReplication(ctx context.Context, replication *api.Replication) error {
 	// If destination is nil, the address must not be localhost.
 	if replication.Spec.Destination == nil {
-		// TODO: Delete OP
-		return nil
+		return deleteChunk(ctx, replication)
 	}
 
-	var localPath, revision, filename, targetPath string
+	if replication.Spec.Source.Hub != nil {
+		return downloadChunk(ctx, replication)
+	}
+	return nil
+}
 
-	// If modelHub != nil, it must be download to the localhost.
-	if replication.Spec.Source.ModelHub != nil {
-		_, localPath = parseURI(*replication.Spec.Destination.URI)
-		revision = *replication.Spec.Source.ModelHub.Revision
-		filename = *replication.Spec.Source.ModelHub.Filename
-		splits := strings.Split(localPath, "/blobs/")
+func downloadChunk(ctx context.Context, replication *api.Replication) error {
+	logger := log.FromContext(ctx)
+
+	var blobPath, revision, filename, targetPath string
+
+	// If hub != nil, it must be download to the localhost.
+	if replication.Spec.Source.Hub != nil {
+		_, blobPath = parseURI(*replication.Spec.Destination.URI)
+		revision = *replication.Spec.Source.Hub.Revision
+		filename = *replication.Spec.Source.Hub.Filename
+		splits := strings.Split(blobPath, "/blobs/")
 		targetPath = splits[0] + "/snapshots/" + revision + "/" + filename
 
 		// symlink exists means already downloaded.
@@ -51,9 +61,9 @@ func HandleReplication(logger logr.Logger, replication *api.Replication) error {
 			return nil
 		}
 
-		if *replication.Spec.Source.ModelHub.Name == api.HUGGINGFACE_MODEL_HUB {
+		if *replication.Spec.Source.Hub.Name == api.HUGGINGFACE_MODEL_HUB {
 			logger.Info("Start to download file from Huggingface Hub", "file", filename)
-			if err := downloadFromHF(replication.Spec.Source.ModelHub.ModelID, revision, filename, localPath); err != nil {
+			if err := downloadFromHF(replication.Spec.Source.Hub.RepoID, revision, filename, blobPath); err != nil {
 				return err
 			}
 			// TODO: handle modelScope
@@ -65,7 +75,7 @@ func HandleReplication(logger logr.Logger, replication *api.Replication) error {
 	// symlink can helps to validate the file is downloaded successfully.
 	// TODO: once we support split a file to several chunks, the targetPath should be
 	// changed here, such as targetPath-0001.
-	if err := createSymlink(localPath, targetPath); err != nil {
+	if err := createSymlink(blobPath, targetPath); err != nil {
 		logger.Error(err, "failed to create symlink")
 		return err
 	}
@@ -74,8 +84,19 @@ func HandleReplication(logger logr.Logger, replication *api.Replication) error {
 	return nil
 }
 
-// localPath looks like: /workspace/models/Qwen--Qwen2-0.5B-Instruct-GGUF/blobs/8b08b8632419bd6d7369362945b5976c7f47b1c1--0001
-// symlink file looks like: /mnt/models/Qwen--Qwen2-0.5B-Instruct-GGUF/snapshots/main/qwen2-0_5b-instruct-q5_k_m.gguf
+func deleteChunk(ctx context.Context, replication *api.Replication) error {
+	logger := log.FromContext(ctx)
+	logger.Info("try to delete chunk", "Replication", replication.Name, "chunk", replication.Spec.ChunkName)
+	splits := strings.Split(*replication.Spec.Source.URI, "://")
+	if err := deleteSymlinkAndTarget(splits[1]); err != nil {
+		logger.Error(err, "failed to delete chunk", "Replication", klog.KObj(replication), "chunk", replication.Spec.ChunkName)
+	}
+	return nil
+}
+
+// local(real) file looks like: /workspace/models/Qwen--Qwen2-0.5B-Instruct-GGUF/blobs/8b08b8632419bd6d7369362945b5976c7f47b1c1--0001
+// target file locates at /workspace/models/Qwen--Qwen2-0.5B-Instruct-GGUF/snapshots/main/qwen2-0_5b-instruct-q5_k_m.gguf
+// the symlink of target file looks like ../../blobs/8b08b8632419bd6d7369362945b5976c7f47b1c1--0001
 func createSymlink(localPath, targetPath string) error {
 	dir := filepath.Dir(targetPath)
 	err := os.MkdirAll(dir, 0755)
@@ -101,6 +122,30 @@ func createSymlink(localPath, targetPath string) error {
 	// one is /mnt/models, another is /workspace/models.
 	sourcePath := "../.." + "/blobs/" + splits[1]
 	return os.Symlink(sourcePath, targetPath)
+}
+
+func deleteSymlinkAndTarget(symlinkPath string) error {
+	targetPath, err := filepath.EvalSymlinks(symlinkPath)
+	if err != nil {
+		return fmt.Errorf("failed to read symlink: %v", err)
+	}
+
+	if err := os.Remove(symlinkPath); err != nil {
+		return fmt.Errorf("failed to remove symlink: %v", err)
+	}
+
+	if _, err := os.Stat(targetPath); err == nil {
+		if err := os.Remove(targetPath); err != nil {
+			return fmt.Errorf("failed to remove target file: %v", err)
+		}
+		fmt.Printf("Target file %s removed.\n", targetPath)
+	} else if os.IsNotExist(err) {
+		fmt.Printf("Target file %s does not exist.\n", targetPath)
+	} else {
+		return fmt.Errorf("failed to check target file: %v", err)
+	}
+
+	return nil
 }
 
 func parseURI(uri string) (host string, address string) {

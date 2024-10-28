@@ -65,6 +65,7 @@ func (r *ReplicationReconciler) Reconcile(ctx context.Context, req ctrl.Request)
 	if setReplicationCondition(replication) {
 		return ctrl.Result{}, r.Status().Update(ctx, replication)
 	}
+
 	return ctrl.Result{}, nil
 }
 

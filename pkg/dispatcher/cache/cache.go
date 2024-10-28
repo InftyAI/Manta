@@ -121,12 +121,24 @@ func (c *Cache) NodeTotalSizeBytes(nodename string) (size int64) {
 	return
 }
 
-func (c *Cache) ChunkExist(chunkname string) (*ChunkInfo, bool) {
+func (c *Cache) ChunkNodes(chunkname string) []string {
 	c.RLock()
 	defer c.RUnlock()
 
 	info, ok := c.chunks[chunkname]
-	return info, ok
+	if !ok {
+		return nil
+	}
+
+	return info.Nodes.UnsortedList()
+}
+
+func (c *Cache) ChunkExist(chunkname string) bool {
+	c.RLock()
+	defer c.RUnlock()
+
+	_, ok := c.chunks[chunkname]
+	return ok
 }
 
 // Snapshot is called before dispatching.

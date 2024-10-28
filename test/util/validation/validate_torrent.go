@@ -25,6 +25,7 @@ import (
 	"github.com/onsi/gomega"
 	"github.com/onsi/gomega/format"
 
+	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	apimeta "k8s.io/apimachinery/pkg/api/meta"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/labels"
@@ -77,13 +78,13 @@ func ValidateTorrentStatusEqualTo(ctx context.Context, k8sClient client.Client, 
 			return fmt.Errorf("phase should be consistent with status condition type")
 		}
 
-		if torrent.Spec.ModelHub != nil && torrent.Spec.ModelHub.Filename != nil {
+		if torrent.Spec.Hub != nil && torrent.Spec.Hub.Filename != nil {
 			if torrent.Status.Repo == nil || len(torrent.Status.Repo.Objects) != 1 {
 				return fmt.Errorf("unexpected object length, should be equal to 1")
 			}
 		}
 
-		if torrent.Spec.ModelHub != nil && torrent.Spec.ModelHub.Filename == nil {
+		if torrent.Spec.Hub != nil && torrent.Spec.Hub.Filename == nil {
 			if torrent.Status.Repo == nil || len(torrent.Status.Repo.Objects) <= 1 {
 				return fmt.Errorf("unexpected file length, should be greater than 1")
 			}
@@ -95,14 +96,23 @@ func ValidateTorrentStatusEqualTo(ctx context.Context, k8sClient client.Client, 
 
 		for _, obj := range torrent.Status.Repo.Objects {
 			for _, chunk := range obj.Chunks {
-				if conditionType == api.ReadyConditionType && chunk.State != api.TrackedTrackerState {
-					return fmt.Errorf("once condition is Ready, chunk state must be Tracked")
+				if conditionType == api.ReadyConditionType && chunk.State != api.ReadyTrackerState {
+					return fmt.Errorf("once condition is Ready, chunk state must be Ready")
 				}
 			}
 		}
 
 		return nil
 	}, timeout, interval).Should(gomega.Succeed())
+}
+
+func ValidateTorrentNotExist(ctx context.Context, k8sClient client.Client, torrent *api.Torrent) {
+	gomega.Eventually(func() error {
+		if err := k8sClient.Get(ctx, types.NamespacedName{Name: torrent.Name}, torrent); err != nil && apierrors.IsNotFound(err) {
+			return nil
+		}
+		return fmt.Errorf("want not exist error")
+	}, util.Timeout, util.Interval).Should(gomega.Succeed())
 }
 
 func ValidateAllReplicationsNodeNameEqualTo(ctx context.Context, k8sClient client.Client, torrent *api.Torrent, nodeName string) {
@@ -137,4 +147,17 @@ func ValidateReplicationsNumberEqualTo(ctx context.Context, k8sClient client.Cli
 		return len(replicationList.Items) == number
 
 	}, util.Timeout, util.Interval).Should(gomega.BeTrue())
+}
+
+func ValidateNodeTrackerChunkNumberEqualTo(ctx context.Context, k8sClient client.Client, nodeTrackerName string, number int) {
+	gomega.Eventually(func() error {
+		nt := &api.NodeTracker{}
+		if err := k8sClient.Get(ctx, types.NamespacedName{Name: nodeTrackerName}, nt); err != nil {
+			return err
+		}
+		if len(nt.Spec.Chunks) != number {
+			return fmt.Errorf("unexpected chunk number, want %d, got %d", number, len(nt.Spec.Chunks))
+		}
+		return nil
+	}, util.Timeout, util.Interval).Should(gomega.Succeed())
 }

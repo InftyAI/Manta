@@ -24,7 +24,7 @@ import (
 	"github.com/inftyai/manta/test/util/wrapper"
 )
 
-// TODO: once source modelHub != nil, it's address must not be nil.
+// TODO: once source.hub != nil, it's address must not be nil.
 // TODO: add validation to URI, must be <host>://<index>
 var _ = ginkgo.Describe("Replication default and validation", func() {
 
@@ -50,16 +50,29 @@ var _ = ginkgo.Describe("Replication default and validation", func() {
 				gomega.Expect(k8sClient.Create(ctx, tc.replication())).To(gomega.Succeed())
 			}
 		},
-		ginkgo.Entry("replication with modelHub set", &testValidatingCase{
+		ginkgo.Entry("replication with hub set", &testValidatingCase{
 			replication: func() *api.Replication {
-				return wrapper.MakeReplication("fake-replication").SourceOfModelHub("Huggingface", "Qwen/Qwen2-7B-Instruct", "", "").Obj()
+				return wrapper.MakeReplication("fake-replication").SourceOfHub("Huggingface", "Qwen/Qwen2-7B-Instruct", "", "").DestinationOfURI("localhost://destination").Obj()
 			},
 			failed: false,
 		}),
-		ginkgo.Entry("replication with modelHub and URI unset", &testValidatingCase{
+		ginkgo.Entry("replication with hub and URI unset", &testValidatingCase{
 			replication: func() *api.Replication {
 				replication := wrapper.MakeReplication("fake-replication").Obj()
 				return replication
+			},
+			failed: true,
+		}),
+		ginkgo.Entry("once source is localhost, destination must be nil", &testValidatingCase{
+			replication: func() *api.Replication {
+				replication := wrapper.MakeReplication("fake-replication").SourceOfURI("localhost://source").DestinationOfURI("localhost://destination").Obj()
+				return replication
+			},
+			failed: true,
+		}),
+		ginkgo.Entry("destination.uri must be localhost once source.hub is not nil", &testValidatingCase{
+			replication: func() *api.Replication {
+				return wrapper.MakeReplication("fake-replication").SourceOfHub("Huggingface", "Qwen/Qwen2-7B-Instruct", "", "").DestinationOfURI("remote://destination").Obj()
 			},
 			failed: true,
 		}),

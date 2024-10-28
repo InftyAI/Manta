@@ -28,17 +28,17 @@ const (
 )
 
 // This is inspired by https://github.com/InftyAI/llmaz.
-// ModelHub represents the model registry for model downloads.
-type ModelHub struct {
+// Hub represents the model registry for model downloads.
+type Hub struct {
 	// TODO: support ModelScope
 	// Name refers to the model registry, such as huggingface.
 	// +kubebuilder:default=Huggingface
 	// +kubebuilder:validation:Enum={Huggingface}
 	// +optional
 	Name *string `json:"name,omitempty"`
-	// ModelID refers to the model identifier on model hub,
+	// RepoID refers to the identifier on hub,
 	// such as meta-llama/Meta-Llama-3-8B.
-	ModelID string `json:"modelID"`
+	RepoID string `json:"repoID"`
 	// Filename refers to a specified model file rather than the whole repo.
 	// This is helpful to download a specified GGUF model rather than downloading
 	// the whole repo which includes all kinds of quantized models.
@@ -65,10 +65,10 @@ const (
 
 // TorrentSpec defines the desired state of Torrent
 type TorrentSpec struct {
-	// ModelHub represents the model registry for model downloads.
-	// ModelHub and URI are exclusive.
+	// Hub represents the model registry for model downloads.
+	// Hub and URI are exclusive.
 	// +optional
-	ModelHub *ModelHub `json:"modelHub,omitempty"`
+	Hub *Hub `json:"hub,omitempty"`
 
 	// TODO: not implemented.
 	// URI represents a various kinds of file sources following the uri protocol, e.g.
@@ -97,8 +97,9 @@ type TorrentSpec struct {
 type TrackerState string
 
 const (
-	PendingTrackerState TrackerState = "Pending"
-	TrackedTrackerState TrackerState = "Tracked"
+	PendingTrackerState  TrackerState = "Pending"
+	ReadyTrackerState    TrackerState = "Ready"
+	DeletingTrackerState TrackerState = "Deleting"
 )
 
 type ChunkStatus struct {
@@ -110,8 +111,8 @@ type ChunkStatus struct {
 	Name string `json:"name"`
 	// SizeBytes represents the chunk size.
 	SizeBytes int64 `json:"sizeBytes"`
-	// State represents the state of the chunk, whether in pending or tracked already.
-	// Chunks in Pending state will bring in Replication creations.
+	// State represents the state of the chunk, whether in Pending or Ready.
+	// Chunks in Pending state will lead to Replication creation operations.
 	State TrackerState `json:"state"`
 }
 
@@ -147,6 +148,8 @@ const (
 	DownloadConditionType = "Downloading"
 	// ReadyConditionType represents the Torrent is downloaded successfully.
 	ReadyConditionType = "Ready"
+	// ReclaimingConditionType represents the Torrent is removing chunks.
+	ReclaimingConditionType = "Reclaiming"
 )
 
 // TorrentStatus defines the observed state of Torrent

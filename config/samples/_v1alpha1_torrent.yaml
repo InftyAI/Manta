@@ -10,10 +10,11 @@ metadata:
   name: torrent-sample
 spec:
   replicas: 1
+  reclaimPolicy: Delete
   # nodeSelector:
   #   zone: zone1
-  modelHub:
-    modelID: Qwen/Qwen2.5-0.5B
+  hub:
+    repoID: Qwen/Qwen2.5-0.5B
     # With one file.
     # modelID: Qwen/Qwen2-0.5B-Instruct-GGUF
     # filename: qwen2-0_5b-instruct-q5_k_m.gguf

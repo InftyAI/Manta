@@ -18,6 +18,7 @@ package webhook
 
 import (
 	"context"
+	"strings"
 
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/util/validation/field"
@@ -75,11 +76,27 @@ func (w *ReplicationWebhook) generateValidate(obj runtime.Object) field.ErrorLis
 
 	var allErrs field.ErrorList
 
-	if replication.Spec.Destination != nil && replication.Spec.Destination.ModelHub == nil && replication.Spec.Destination.URI == nil {
-		allErrs = append(allErrs, field.Forbidden(specPath.Child("destination"), "modelHub and URI couldn't be both null in Destination"))
+	if replication.Spec.Destination != nil && replication.Spec.Destination.Hub == nil && replication.Spec.Destination.URI == nil {
+		allErrs = append(allErrs, field.Forbidden(specPath.Child("destination"), "hub and URI couldn't be both null in Destination"))
 	}
-	if replication.Spec.Source.ModelHub == nil && replication.Spec.Source.URI == nil {
-		allErrs = append(allErrs, field.Forbidden(specPath.Child("source"), "modelHub and URI couldn't be both null in Source"))
+	if replication.Spec.Source.Hub == nil && replication.Spec.Source.URI == nil {
+		allErrs = append(allErrs, field.Forbidden(specPath.Child("source"), "hub and URI couldn't be both null in Source"))
+	}
+	if replication.Spec.Source.URI != nil {
+		splits := strings.Split(*replication.Spec.Source.URI, "://")
+		if splits[0] == "localhost" && replication.Spec.Destination != nil {
+			allErrs = append(allErrs, field.Forbidden(specPath.Child("destination"), "destination must be nil once source is localhost"))
+		}
+	}
+	if replication.Spec.Source.Hub != nil {
+		if replication.Spec.Destination == nil || replication.Spec.Destination.URI == nil {
+			allErrs = append(allErrs, field.Forbidden(specPath.Child("destination.uri"), "destination.uri must not be nil once source.hub is not nil"))
+		}
+		// TODO: we may support upload to remote store in the future if highly demanded.
+		splits := strings.Split(*replication.Spec.Destination.URI, "://")
+		if splits[0] != "localhost" {
+			allErrs = append(allErrs, field.Forbidden(specPath.Child("destination.uri"), "destination.uri must be localhost once source.hub is not nil"))
+		}
 	}
 	return allErrs
 }
