@@ -24,7 +24,6 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	api "github.com/inftyai/manta/api/v1alpha1"
-	"github.com/inftyai/manta/test/util"
 	"github.com/inftyai/manta/test/util/validation"
 	"github.com/inftyai/manta/test/util/wrapper"
 )
@@ -41,35 +40,36 @@ var _ = ginkgo.Describe("torrent e2e test", func() {
 			},
 		}
 		gomega.Expect(k8sClient.Create(ctx, ns)).To(gomega.Succeed())
-		// Hardcoded the namespace here because we just can't change the namespace dynamically.
-		gomega.Expect(util.Apply(ctx, k8sClient, "../../agent/deploy", "manta-system", "create")).To(gomega.Succeed())
 	})
 	ginkgo.AfterEach(func() {
-		// Hardcoded the namespace here because we just can't change the namespace dynamically.
-		gomega.Expect(util.Apply(ctx, k8sClient, "../../agent/deploy", "manta-system", "delete")).To(gomega.Succeed())
 		gomega.Expect(k8sClient.Delete(ctx, ns)).To(gomega.Succeed())
 	})
 
-	ginkgo.It("Can download a model successfully", func() {
-		torrent := wrapper.MakeTorrent("facebook-opt-125m").Hub("Huggingface", "facebook/opt-125m", "").Obj()
+	ginkgo.It("Can download and delete a model successfully", func() {
+		torrent := wrapper.MakeTorrent("facebook-opt-125m").Hub("Huggingface", "facebook/opt-125m", "").ReclaimPolicy(api.DeleteReclaimPolicy).Obj()
 		gomega.Expect(k8sClient.Create(ctx, torrent)).To(gomega.Succeed())
 		defer func() {
 			gomega.Expect(k8sClient.Delete(ctx, torrent)).To(gomega.Succeed())
+			validation.ValidateTorrentNotExist(ctx, k8sClient, torrent)
 		}()
 
 		validation.ValidateTorrentStatusEqualTo(ctx, k8sClient, torrent, api.ReadyConditionType, "Ready", metav1.ConditionTrue, &validation.ValidateOptions{Timeout: 5 * time.Minute})
 		validation.ValidateReplicationsNumberEqualTo(ctx, k8sClient, torrent, 0)
 	})
 
-	// ginkgo.It("Can download a model with nodeSelector configured", func() {
-	// 	torrent := wrapper.MakeTorrent("facebook-opt-125m").Hub("Huggingface", "facebook/opt-125m", "").NodeSelector("kubernetes.io/hostname", "kind-worker2").Obj()
-	// 	gomega.Expect(k8sClient.Create(ctx, torrent)).To(gomega.Succeed())
-	// 	defer func() {
-	// 		gomega.Expect(k8sClient.Delete(ctx, torrent)).To(gomega.Succeed())
-	// 	}()
+	ginkgo.It("Can download and delete a model with nodeSelector configured", func() {
+		torrent := wrapper.MakeTorrent("facebook-opt-125m").Hub("Huggingface", "facebook/opt-125m", "").ReclaimPolicy(api.DeleteReclaimPolicy).NodeSelector("kubernetes.io/hostname", "kind-worker2").Obj()
+		gomega.Expect(k8sClient.Create(ctx, torrent)).To(gomega.Succeed())
+		defer func() {
+			gomega.Expect(k8sClient.Delete(ctx, torrent)).To(gomega.Succeed())
+			validation.ValidateTorrentNotExist(ctx, k8sClient, torrent)
+			validation.ValidateNodeTrackerChunkNumberEqualTo(ctx, k8sClient, "kind-worker2", 0)
+		}()
 
-	// 	validation.ValidateTorrentStatusEqualTo(ctx, k8sClient, torrent, api.ReadyConditionType, "Ready", metav1.ConditionTrue, &validation.ValidateOptions{Timeout: 5 * time.Minute})
-	// 	validation.ValidateAllReplicationsNodeNameEqualTo(ctx, k8sClient, torrent, "kind-worker2")
-	// 	validation.ValidateReplicationsNumberEqualTo(ctx, k8sClient, torrent, 0)
-	// })
+		validation.ValidateTorrentStatusEqualTo(ctx, k8sClient, torrent, api.ReadyConditionType, "Ready", metav1.ConditionTrue, &validation.ValidateOptions{Timeout: 5 * time.Minute})
+		validation.ValidateAllReplicationsNodeNameEqualTo(ctx, k8sClient, torrent, "kind-worker2")
+		validation.ValidateReplicationsNumberEqualTo(ctx, k8sClient, torrent, 0)
+		// From https://huggingface.co/facebook/opt-125m/tree/main, opt-125m has 12 files.
+		validation.ValidateNodeTrackerChunkNumberEqualTo(ctx, k8sClient, "kind-worker2", 12)
+	})
 })

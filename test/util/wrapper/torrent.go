@@ -59,6 +59,11 @@ func (w *TorrentWrapper) Replicas(replicas int32) *TorrentWrapper {
 	return w
 }
 
+func (w *TorrentWrapper) ReclaimPolicy(policy api.ReclaimPolicy) *TorrentWrapper {
+	w.Spec.ReclaimPolicy = &policy
+	return w
+}
+
 func (w *TorrentWrapper) NodeSelector(k, v string) *TorrentWrapper {
 	if w.Spec.NodeSelector == nil {
 		w.Spec.NodeSelector = map[string]string{}

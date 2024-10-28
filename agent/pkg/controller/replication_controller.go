@@ -65,6 +65,7 @@ func (r *ReplicationReconciler) Reconcile(ctx context.Context, req ctrl.Request)
 	// Filter out unrelated events.
 	if replication.Spec.NodeName != NODE_NAME ||
 		replicationReady(replication) ||
+		// Waiting for the control plane set the Pending status.
 		len(replication.Status.Conditions) == 0 {
 		logger.V(10).Info("Skip replication", "Replication", klog.KObj(replication))
 		return ctrl.Result{}, nil
@@ -72,21 +73,25 @@ func (r *ReplicationReconciler) Reconcile(ctx context.Context, req ctrl.Request)
 
 	logger.Info("Reconcile replication", "Replication", klog.KObj(replication))
 
-	if conditionChanged := setReplicationCondition(replication, api.DownloadConditionType); conditionChanged {
+	conditionType := api.DownloadConditionType
+	if replication.Spec.Destination == nil {
+		conditionType = api.ReclaimingConditionType
+	}
+	if conditionChanged := setReplicationCondition(replication, conditionType); conditionChanged {
 		return ctrl.Result{}, r.Status().Update(ctx, replication)
 	}
 
 	// This may take a long time, the concurrency is controlled by the MaxConcurrentReconciles.
-	if err := agenthandler.HandleReplication(logger, replication); err != nil {
+	if err := agenthandler.HandleReplication(ctx, replication); err != nil {
 		return ctrl.Result{}, err
 	} else {
+		if err := r.updateNodeTracker(ctx, replication); err != nil {
+			return ctrl.Result{}, err
+		}
 		if conditionChanged := setReplicationCondition(replication, api.ReadyConditionType); conditionChanged {
 			if err := r.Status().Update(ctx, replication); err != nil {
 				return ctrl.Result{}, err
 			}
-		}
-		if err := r.updateNodeTracker(ctx, replication); err != nil {
-			return ctrl.Result{}, err
 		}
 	}
 
@@ -100,20 +105,30 @@ func (r *ReplicationReconciler) updateNodeTracker(ctx context.Context, replicati
 	}
 
 	chunkName := replication.Spec.ChunkName
-	for _, chunk := range nodeTracker.Spec.Chunks {
-		if chunk.ChunkName == chunkName {
-			// Already included.
-			return nil
+
+	if replication.Spec.Destination == nil {
+		// Delete chunk
+		for i, chunk := range nodeTracker.Spec.Chunks {
+			if chunk.ChunkName == chunkName {
+				nodeTracker.Spec.Chunks = append(nodeTracker.Spec.Chunks[0:i], nodeTracker.Spec.Chunks[i+1:len(nodeTracker.Spec.Chunks)]...)
+				break
+			}
 		}
+	} else {
+		// Add chunk
+		for _, chunk := range nodeTracker.Spec.Chunks {
+			if chunk.ChunkName == chunkName {
+				// Already included.
+				return nil
+			}
+		}
+		nodeTracker.Spec.Chunks = append(nodeTracker.Spec.Chunks, api.ChunkTracker{
+			ChunkName: chunkName,
+			SizeBytes: replication.Spec.SizeBytes,
+		})
 	}
-	nodeTracker.Spec.Chunks = append(nodeTracker.Spec.Chunks, api.ChunkTracker{
-		ChunkName: chunkName,
-		SizeBytes: replication.Spec.SizeBytes,
-	})
-	if err := r.Client.Update(ctx, nodeTracker); err != nil {
-		return err
-	}
-	return nil
+
+	return r.Client.Update(ctx, nodeTracker)
 }
 
 // SetupWithManager sets up the controller with the Manager.

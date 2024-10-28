@@ -17,6 +17,7 @@ package e2e
 
 import (
 	"context"
+	"fmt"
 	"testing"
 
 	. "github.com/onsi/ginkgo/v2"
@@ -84,7 +85,7 @@ func readyForTesting(client client.Client) {
 		NodeName("unknown-node").
 		ChunkName("chunk1").
 		SizeBytes(1024).
-		SourceOfHub("Huggingface", "facebook/opt-125m", "main", "").
+		SourceOfURI("localhost:///workspace/models/modelA").
 		Obj()
 
 	// Once the creation succeeds, that means the webhooks are ready
@@ -94,8 +95,22 @@ func readyForTesting(client client.Client) {
 	}, util.Timeout, util.Interval).Should(Succeed())
 
 	// Delete this replication before beginning tests.
-	Expect(client.Delete(ctx, replication))
+	Expect(client.Delete(ctx, replication)).To(Succeed())
 	Eventually(func() error {
 		return client.Get(ctx, types.NamespacedName{Name: replication.Name}, &api.Replication{})
 	}).ShouldNot(Succeed())
+
+	By("waiting for nodeTrackers to ready")
+	// Hardcoded the namespace here because we just can't change the namespace dynamically.
+	Expect(util.Apply(ctx, k8sClient, "../../agent/deploy", "manta-system", "create")).To(Succeed())
+	Eventually(func() error {
+		nodeTrackers := &api.NodeTrackerList{}
+		if err := client.List(ctx, nodeTrackers); err != nil {
+			return err
+		}
+		if len(nodeTrackers.Items) == 0 {
+			return fmt.Errorf("no nodeTrackers")
+		}
+		return nil
+	}, util.Timeout, util.Interval).Should(Succeed())
 }

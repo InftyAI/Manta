@@ -27,10 +27,23 @@ import (
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/apimachinery/pkg/runtime/serializer/yaml"
+	"k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	api "github.com/inftyai/manta/api/v1alpha1"
 )
+
+func UpdateNodeTracker(ctx context.Context, k8sClient client.Client, ntName string, chunkName string, size int32) error {
+	nt := &api.NodeTracker{}
+	if err := k8sClient.Get(ctx, types.NamespacedName{Name: ntName}, nt); err != nil {
+		return err
+	}
+	nt.Spec.Chunks = append(nt.Spec.Chunks, api.ChunkTracker{ChunkName: chunkName, SizeBytes: int64(size)})
+	if err := k8sClient.Update(ctx, nt); err != nil {
+		return err
+	}
+	return nil
+}
 
 func UpdateReplicationsCondition(ctx context.Context, k8sClient client.Client, torrent *api.Torrent, conditionType string) {
 	gomega.Eventually(func() error {

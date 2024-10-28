@@ -23,6 +23,7 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
+	"k8s.io/klog/v2"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/builder"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -70,7 +71,8 @@ func (r *NodeTrackerReconciler) Reconcile(ctx context.Context, req ctrl.Request)
 
 	node := &corev1.Node{}
 	if err := r.Get(ctx, types.NamespacedName{Name: req.Name}, node); err != nil {
-		return ctrl.Result{}, err
+		// Work for integration test.
+		return ctrl.Result{}, client.IgnoreNotFound(err)
 	}
 
 	if !reflect.DeepEqual(node.Labels, nodeTracker.Labels) {
@@ -84,19 +86,25 @@ func (r *NodeTrackerReconciler) Reconcile(ctx context.Context, req ctrl.Request)
 }
 
 func (r *NodeTrackerReconciler) Create(e event.CreateEvent) bool {
+	nodeTracker, match := e.Object.(*api.NodeTracker)
+	if !match {
+		return false
+	}
+
+	logger := log.FromContext(context.Background()).WithValues("NodeTracker", klog.KObj(nodeTracker))
+	logger.Info("NodeTracker create event")
+	r.dispatcher.AddNodeTracker(nodeTracker)
 	return true
 }
 
 func (r *NodeTrackerReconciler) Update(e event.UpdateEvent) bool {
-	switch e.ObjectNew.(type) {
-	case *api.NodeTracker:
+	newObj, match := e.ObjectNew.(*api.NodeTracker)
 	// Other objs like Nodes should not be handled below.
-	default:
+	if !match {
 		return true
 	}
 
 	oldObj := e.ObjectOld.(*api.NodeTracker)
-	newObj := e.ObjectNew.(*api.NodeTracker)
 	r.dispatcher.UpdateNodeTracker(oldObj, newObj)
 	return true
 }

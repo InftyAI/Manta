@@ -48,6 +48,7 @@ type ChunkInfo struct {
 	Name         string
 	Size         int64
 	Path         string
+	Revision     string
 	NodeSelector map[string]string
 }
 

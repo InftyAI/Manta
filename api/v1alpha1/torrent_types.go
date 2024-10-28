@@ -97,8 +97,9 @@ type TorrentSpec struct {
 type TrackerState string
 
 const (
-	PendingTrackerState TrackerState = "Pending"
-	TrackedTrackerState TrackerState = "Tracked"
+	PendingTrackerState  TrackerState = "Pending"
+	ReadyTrackerState    TrackerState = "Ready"
+	DeletingTrackerState TrackerState = "Deleting"
 )
 
 type ChunkStatus struct {
@@ -110,8 +111,8 @@ type ChunkStatus struct {
 	Name string `json:"name"`
 	// SizeBytes represents the chunk size.
 	SizeBytes int64 `json:"sizeBytes"`
-	// State represents the state of the chunk, whether in pending or tracked already.
-	// Chunks in Pending state will bring in Replication creations.
+	// State represents the state of the chunk, whether in Pending or Ready.
+	// Chunks in Pending state will lead to Replication creation operations.
 	State TrackerState `json:"state"`
 }
 
@@ -147,6 +148,8 @@ const (
 	DownloadConditionType = "Downloading"
 	// ReadyConditionType represents the Torrent is downloaded successfully.
 	ReadyConditionType = "Ready"
+	// ReclaimingConditionType represents the Torrent is removing chunks.
+	ReclaimingConditionType = "Reclaiming"
 )
 
 // TorrentStatus defines the observed state of Torrent

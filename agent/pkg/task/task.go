@@ -106,6 +106,11 @@ func syncChunks(ctx context.Context, c client.Client) {
 }
 
 func UpdateChunks(nt *api.NodeTracker, chunks []chunkInfo) {
+	if len(chunks) == 0 {
+		nt.Spec.Chunks = nil
+		return
+	}
+
 	nt.Spec.Chunks = make([]api.ChunkTracker, 0, len(chunks))
 	for _, chunk := range chunks {
 		nt.Spec.Chunks = append(nt.Spec.Chunks,
@@ -182,6 +187,9 @@ func walkThroughChunks(path string) (chunks []chunkInfo, err error) {
 
 		snapshotPath := path + repo.Name() + "/snapshots/"
 		if _, err := os.Stat(snapshotPath); err != nil {
+			if os.IsNotExist(err) {
+				return nil, nil
+			}
 			return nil, err
 		}
 

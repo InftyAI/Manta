@@ -18,6 +18,7 @@ package wrapper
 
 import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/utils/ptr"
 
 	api "github.com/inftyai/manta/api/v1alpha1"
 )
@@ -55,7 +56,13 @@ func (w *ReplicationWrapper) SizeBytes(size int64) *ReplicationWrapper {
 	return w
 }
 
-// Only one tuple be default.
+func (w *ReplicationWrapper) SourceOfURI(uri string) *ReplicationWrapper {
+	w.Spec.Source = api.Target{
+		URI: ptr.To[string](uri),
+	}
+	return w
+}
+
 func (w *ReplicationWrapper) SourceOfHub(name, repoID, revision, filename string) *ReplicationWrapper {
 	source := api.Target{
 		Hub: &api.Hub{
@@ -76,10 +83,9 @@ func (w *ReplicationWrapper) SourceOfHub(name, repoID, revision, filename string
 	return w
 }
 
-// Only one tuple be default.
-func (w *ReplicationWrapper) DestinationOfAddress(address string) *ReplicationWrapper {
+func (w *ReplicationWrapper) DestinationOfURI(uri string) *ReplicationWrapper {
 	destination := api.Target{
-		URI: &address,
+		URI: &uri,
 	}
 	w.Spec.Destination = &destination
 	return w

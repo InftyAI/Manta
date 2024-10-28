@@ -367,5 +367,64 @@ var _ = ginkgo.Describe("Torrent controller test", func() {
 				},
 			},
 		}),
+		ginkgo.Entry("Torrent deletion", &testValidatingCase{
+			precondition: func() error {
+				nodeTracker := wrapper.MakeNodeTracker("node1").Obj()
+				return k8sClient.Create(ctx, nodeTracker)
+			},
+			makeTorrent: func() *api.Torrent {
+				return wrapper.MakeTorrent("qwen2-7b").
+					Hub("Huggingface", "Qwen/Qwen2-7B-Instruct", "").
+					ReclaimPolicy(api.DeleteReclaimPolicy).
+					Obj()
+			},
+			updates: []*update{
+				{
+					updateFunc: func(torrent *api.Torrent) {
+						gomega.Expect(k8sClient.Create(ctx, torrent)).To(gomega.Succeed())
+					},
+					checkFunc: func(ctx context.Context, k8sClient client.Client, torrent *api.Torrent) {
+						validation.ValidateTorrentStatusEqualTo(ctx, k8sClient, torrent, api.PendingConditionType, "Pending", metav1.ConditionTrue, nil)
+						validation.ValidateReplicationsNumberEqualTo(ctx, k8sClient, torrent, util.TorrentChunkNumber(torrent))
+					},
+				},
+				{
+					updateFunc: func(torrent *api.Torrent) {
+						util.UpdateReplicationsCondition(ctx, k8sClient, torrent, api.DownloadConditionType)
+					},
+					checkFunc: func(ctx context.Context, k8sClient client.Client, torrent *api.Torrent) {
+						validation.ValidateTorrentStatusEqualTo(ctx, k8sClient, torrent, api.DownloadConditionType, "Downloading", metav1.ConditionTrue, nil)
+					},
+				},
+				{
+					updateFunc: func(torrent *api.Torrent) {
+						util.UpdateReplicationsCondition(ctx, k8sClient, torrent, api.ReadyConditionType)
+					},
+					checkFunc: func(ctx context.Context, k8sClient client.Client, torrent *api.Torrent) {
+						validation.ValidateTorrentStatusEqualTo(ctx, k8sClient, torrent, api.ReadyConditionType, "Ready", metav1.ConditionTrue, nil)
+						validation.ValidateAllReplicationsNodeNameEqualTo(ctx, k8sClient, torrent, "node1")
+						validation.ValidateReplicationsNumberEqualTo(ctx, k8sClient, torrent, 0)
+					},
+				},
+				{
+					updateFunc: func(torrent *api.Torrent) {
+						// The chunk name must be a real name.
+						gomega.Expect(util.UpdateNodeTracker(ctx, k8sClient, "node1", "a6344aac8c09253b3b630fb776ae94478aa0275b--0001", 1024)).To(gomega.Succeed())
+						gomega.Expect(k8sClient.Delete(ctx, torrent)).To(gomega.Succeed())
+					},
+					checkFunc: func(ctx context.Context, k8sClient client.Client, torrent *api.Torrent) {
+						validation.ValidateTorrentStatusEqualTo(ctx, k8sClient, torrent, api.ReclaimingConditionType, "Reclaiming", metav1.ConditionTrue, nil)
+					},
+				},
+				{
+					updateFunc: func(torrent *api.Torrent) {
+						util.UpdateReplicationsCondition(ctx, k8sClient, torrent, api.ReadyConditionType)
+					},
+					checkFunc: func(ctx context.Context, k8sClient client.Client, torrent *api.Torrent) {
+						validation.ValidateTorrentNotExist(ctx, k8sClient, torrent)
+					},
+				},
+			},
+		}),
 	)
 })
