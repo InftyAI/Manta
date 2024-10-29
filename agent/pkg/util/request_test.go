@@ -14,14 +14,14 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-package handler
+package util
 
 import (
 	"os"
 	"testing"
 )
 
-func Test_downloadFromHF(t *testing.T) {
+func TestDownloadFromHF(t *testing.T) {
 	testCases := []struct {
 		name         string
 		modelID      string
@@ -50,7 +50,7 @@ func Test_downloadFromHF(t *testing.T) {
 
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
-			gotError := downloadFromHF(tc.modelID, tc.revision, tc.path, tc.downloadPath)
+			gotError := DownloadFromHF(tc.modelID, tc.revision, tc.path, tc.downloadPath)
 			defer func() {
 				_ = os.RemoveAll(tc.downloadPath)
 			}()

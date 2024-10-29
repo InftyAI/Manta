@@ -14,7 +14,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-package handler
+package util
 
 import (
 	"fmt"
@@ -29,7 +29,7 @@ const (
 )
 
 // The downloadPath is the full path, like: /workspace/models/Qwen--Qwen2-7B-Instruct/blobs/20024bfe7c83998e9aeaf98a0cd6a2ce6306c2f0--0001
-func downloadFromHF(modelID, revision, path string, downloadPath string) error {
+func DownloadFromHF(modelID, revision, path string, downloadPath string) error {
 	// Example: "https://huggingface.co/Qwen/Qwen2.5-72B-Instruct/resolve/main/model-00031-of-00037.safetensors"
 	url := fmt.Sprintf("%s/%s/resolve/%s/%s", hfEndpoint(), modelID, revision, path)
 	token := hfToken()

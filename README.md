@@ -16,7 +16,7 @@ A lightweight P2P-based cache system for model distributions.
 [GoReport Widget]: https://goreportcard.com/badge/github.com/inftyai/manta
 [GoReport Status]: https://goreportcard.com/report/github.com/inftyai/manta
 
-_Name Story: the inspiration of the name `Manta` is coming from Dota2, called [Manta Style](https://liquipedia.net/dota2/Manta_Style), which will create 2 images of your hero just like peers in the P2P network._
+_Name Story: the inspiration of the name `Manta` is coming from Dota2, called [Manta Style](https://dota2.fandom.com/wiki/Manta_Style), which will create 2 images of your hero just like peers in the P2P network._
 
 
 ## Architecture
@@ -29,7 +29,7 @@ _Name Story: the inspiration of the name `Manta` is coming from Dota2, called [M
 
 - **Preheat Models**: Models could be preloaded to the cluster, or even specified nodes to accelerate the model serving.
 - **Model Caching**: Once models are downloaded, origin access is no longer necessary, but from other node peers.
-- **Plug Framework**: _Filter_ and _Score_ extension points could be customized with plugins to pick the right peers.
+- **Plugin Framework**: _Filter_ and _Score_ extension points could be extended with your own logic to pick up the best candidates in the form of plugin.
 - **Model LCM**: Manage the model lifecycles automatically with different configurations.
 - **Memory Management(WIP)**: Specify the maximum reserved memory for use, and GC with LRU algorithm.
 
@@ -89,16 +89,16 @@ More details refer to the [APIs](https://github.com/InftyAI/Manta/blob/main/api/
 
 ## Roadmap
 
-- GC policy with LRU algorithm
+- Support GC policy with LRU algorithm
 - More integrations with serving projects
 - Support file chunking
 
+## Community
+
+Join us for more discussions:
+
+* **Slack Channel**: [#manta](https://inftyai.slack.com/archives/C07SY8WS45U)
+
 ## Contributions
 
-🚀 All kinds of contributions are welcomed ! Please follow [CONTRIBUTING.md](./CONTRIBUTING.md).
-
-**🎉 Thanks to all these contributors !**
-
-<a href="https://github.com/inftyai/manta/graphs/contributors">
-  <img src="https://contrib.rocks/image?repo=inftyai/manta" />
-</a>
+All kinds of contributions are welcomed ! Please following [CONTRIBUTING.md](./CONTRIBUTING.md).

@@ -26,6 +26,7 @@ import (
 	"k8s.io/klog/v2"
 	"sigs.k8s.io/controller-runtime/pkg/log"
 
+	"github.com/inftyai/manta/agent/pkg/util"
 	api "github.com/inftyai/manta/api/v1alpha1"
 )
 
@@ -63,7 +64,7 @@ func downloadChunk(ctx context.Context, replication *api.Replication) error {
 
 		if *replication.Spec.Source.Hub.Name == api.HUGGINGFACE_MODEL_HUB {
 			logger.Info("Start to download file from Huggingface Hub", "file", filename)
-			if err := downloadFromHF(replication.Spec.Source.Hub.RepoID, revision, filename, blobPath); err != nil {
+			if err := util.DownloadFromHF(replication.Spec.Source.Hub.RepoID, revision, filename, blobPath); err != nil {
 				return err
 			}
 			// TODO: handle modelScope

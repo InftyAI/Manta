@@ -112,7 +112,7 @@ func (d *Dispatcher) PrepareReplications(ctx context.Context, torrent *api.Torre
 		for j, chunk := range obj.Chunks {
 			if chunk.State == api.PendingTrackerState {
 				if d.cache.ChunkExist(chunk.Name) {
-					replications, err = d.schedulingSyncingChunk()
+					replications, err = d.schedulingSyncChunk()
 					if err != nil {
 						return nil, false, err
 					}
@@ -173,7 +173,7 @@ func (d *Dispatcher) ReclaimReplications(ctx context.Context, torrent *api.Torre
 	return replications, torrentStatusChanged, nil
 }
 
-func (d *Dispatcher) schedulingSyncingChunk() (replications []*api.Replication, err error) {
+func (d *Dispatcher) schedulingSyncChunk() (replications []*api.Replication, err error) {
 	return nil, fmt.Errorf("not implemented")
 }
 
