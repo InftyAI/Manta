@@ -32,8 +32,8 @@ type Cache struct {
 	nodes map[string]sets.Set[string]
 
 	// These fileds are only used in dispatching, will be set in snapshot.
-	// No currency happens in dispatching right now, so no need to consider the lock right now,
-	// but once currency introduced, we may change to use sync.Map.
+	// No concurrency happens in dispatching right now, so no need to consider the lock right now,
+	// but once concurrency introduced, we may change to use sync.Map or something similar.
 	state map[string]interface{}
 }
 
@@ -139,6 +139,17 @@ func (c *Cache) ChunkExist(chunkname string) bool {
 
 	_, ok := c.chunks[chunkname]
 	return ok
+}
+
+func (c *Cache) ChunkExistInNode(nodename, chunkname string) bool {
+	c.RLock()
+	defer c.RUnlock()
+
+	chunks, ok := c.nodes[nodename]
+	if !ok {
+		return false
+	}
+	return chunks.Has(chunkname)
 }
 
 // Snapshot is called before dispatching.

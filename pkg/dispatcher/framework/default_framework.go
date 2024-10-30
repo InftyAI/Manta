@@ -92,13 +92,7 @@ func (df *DefaultFramework) RunScorePlugins(ctx context.Context, chunk ChunkInfo
 				score := p.Score(ctx, chunk, nt, cache)
 
 				logger.Info("calculate plugin score", "plugin", plugin.Name(), "node", nt.Name, "file", chunk.Path, "chunk", chunk.Name, "score", score)
-
-				// If score is unstandardized, ignore it to prevent surprising results.
-				if score < 0 || score > 100 {
-					score = 0
-				}
-
-				totalScore += score
+				totalScore += standardScore(score)
 			}
 		}
 		scores[i] = totalScore
@@ -110,4 +104,14 @@ func (df *DefaultFramework) RunScorePlugins(ctx context.Context, chunk ChunkInfo
 		candidates = append(candidates, nodeTrackers[index])
 	}
 	return candidates
+}
+
+func standardScore(score float32) float32 {
+	if score < 0 {
+		return 0
+	}
+	if score > 100 {
+		return 100
+	}
+	return score
 }

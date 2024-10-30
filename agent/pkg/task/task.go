@@ -33,13 +33,14 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/log/zap"
 
+	"github.com/inftyai/manta/agent/pkg/util"
 	api "github.com/inftyai/manta/api/v1alpha1"
 )
 
 const (
 	syncDuration = 5 * time.Minute
 
-	workspace = "/workspace/models/"
+	workspace = util.DefaultWorkspace
 )
 
 var (

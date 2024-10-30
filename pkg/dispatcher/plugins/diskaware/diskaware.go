@@ -29,8 +29,8 @@ var _ framework.FilterPlugin = &DiskAware{}
 var _ framework.ScorePlugin = &DiskAware{}
 
 const (
-	// The default memory size is 30Gi.
-	defaultSizeLimit = "1Ti"
+	// The default memory size is 100Gi.
+	defaultSizeLimit = "100Gi"
 )
 
 type DiskAware struct{}

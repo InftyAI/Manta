@@ -41,7 +41,7 @@ Read the [Installation](./docs//installation.md) for guidance.
 
 ### Preload Models
 
-A toy sample to preload the `Qwen/Qwen2-7B-Instruct` model:
+A toy sample to preload the `Qwen/Qwen2.5-0.5B-Instruct` model:
 
 ```yaml
 apiVersion: manta.io/v1alpha1
@@ -51,7 +51,7 @@ metadata:
 spec:
   replicas: 1
   hub:
-    repoID: Qwen/Qwen2-7B-Instruct
+    repoID: Qwen/Qwen2.5-0.5B-Instruct
 ```
 
 If you want to preload the model to specified nodes, use the `NodeSelector`:
@@ -64,7 +64,7 @@ metadata:
 spec:
   replicas: 1
   hub:
-    repoID: Qwen/Qwen2-7B-Instruct
+    repoID: Qwen/Qwen2.5-0.5B-Instruct
   nodeSelector:
     zone: zone-a
 ```
@@ -79,7 +79,7 @@ metadata:
 spec:
   replicas: 1
   hub:
-    repoID: Qwen/Qwen2-7B-Instruct
+    repoID: Qwen/Qwen2.5-0.5B-Instruct
   nodeSelector:
     zone: zone-a
   reclaimPolicy: Delete

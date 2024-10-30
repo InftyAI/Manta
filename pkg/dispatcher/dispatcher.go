@@ -19,21 +19,21 @@ package dispatcher
 import (
 	"context"
 	"fmt"
-	"strconv"
 	"strings"
 
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/log"
 
+	"github.com/inftyai/manta/agent/pkg/util"
 	api "github.com/inftyai/manta/api/v1alpha1"
 	"github.com/inftyai/manta/pkg/dispatcher/cache"
 	"github.com/inftyai/manta/pkg/dispatcher/framework"
 )
 
 const (
-	localHost        = "localhost://"
-	defaultWorkspace = "/workspace/models/"
+	localHost = api.URI_LOCALHOST + "://"
+	workspace = util.DefaultWorkspace
 )
 
 // DefaultDownloader helps to download the chunks.
@@ -111,20 +111,21 @@ func (d *Dispatcher) PrepareReplications(ctx context.Context, torrent *api.Torre
 	for i, obj := range torrent.Status.Repo.Objects {
 		for j, chunk := range obj.Chunks {
 			if chunk.State == api.PendingTrackerState {
+
+				chunk := framework.ChunkInfo{
+					Name:         chunk.Name,
+					Size:         chunk.SizeBytes,
+					Path:         obj.Path,
+					Revision:     revision(torrent),
+					NodeSelector: torrent.Spec.NodeSelector,
+				}
+
 				if d.cache.ChunkExist(chunk.Name) {
-					replications, err = d.schedulingSyncChunk()
+					replications, err = d.schedulingSyncChunk(ctx, torrent, chunk, nodeTrackers, cache)
 					if err != nil {
 						return nil, false, err
 					}
 				} else {
-					chunk := framework.ChunkInfo{
-						Name:         chunk.Name,
-						Size:         chunk.SizeBytes,
-						Path:         obj.Path,
-						Revision:     revision(torrent),
-						NodeSelector: torrent.Spec.NodeSelector,
-					}
-
 					newReplications, err := d.schedulingDownloadChunk(ctx, torrent, chunk, nodeTrackers, cache)
 					if err != nil {
 						// Once err, ignore for this dispatching cycle, will retry for next cycle.
@@ -173,8 +174,27 @@ func (d *Dispatcher) ReclaimReplications(ctx context.Context, torrent *api.Torre
 	return replications, torrentStatusChanged, nil
 }
 
-func (d *Dispatcher) schedulingSyncChunk() (replications []*api.Replication, err error) {
-	return nil, fmt.Errorf("not implemented")
+func (d *Dispatcher) schedulingSyncChunk(ctx context.Context, torrent *api.Torrent, chunk framework.ChunkInfo, nodeTrackers []api.NodeTracker, cache *cache.Cache) (replications []*api.Replication, err error) {
+	candidates := d.syncer.RunFilterPlugins(ctx, chunk, nodeTrackers, cache)
+
+	if len(candidates) == 0 {
+		return nil, fmt.Errorf("no available candidate")
+	}
+
+	candidates = d.downloader.RunScorePlugins(ctx, chunk, candidates, *torrent.Spec.Replicas, cache)
+
+	// TODO: we only need to download once and sync the rest, will this be better?
+	// Maybe file size is a big take we should consider.
+	for _, candidate := range candidates {
+		replica := buildCreationReplication(torrent, chunk, candidate.Name)
+		replications = append(replications, replica)
+
+		// Make sure the snapshotted cache is always updated.
+		cache.AddChunks([]api.ChunkTracker{
+			{ChunkName: replica.Spec.ChunkName, SizeBytes: replica.Spec.SizeBytes},
+		}, candidate.Name)
+	}
+	return
 }
 
 func (d *Dispatcher) schedulingDownloadChunk(ctx context.Context, torrent *api.Torrent, chunk framework.ChunkInfo, nodeTrackers []api.NodeTracker, cache *cache.Cache) (replications []*api.Replication, err error) {
@@ -188,8 +208,8 @@ func (d *Dispatcher) schedulingDownloadChunk(ctx context.Context, torrent *api.T
 
 	// TODO: we only need to download once and sync the rest, will this be better?
 	// Maybe file size is a big take we should consider.
-	for i, candidate := range candidates {
-		replica := buildCreationReplication(torrent, chunk, i, candidate.Name)
+	for _, candidate := range candidates {
+		replica := buildCreationReplication(torrent, chunk, candidate.Name)
 		replications = append(replications, replica)
 
 		// Make sure the snapshotted cache is always updated.
@@ -241,17 +261,9 @@ func chunkIn(chunks []api.ChunkTracker, chunk api.ChunkTracker) bool {
 	return false
 }
 
-func buildCreationReplication(torrent *api.Torrent, chunk framework.ChunkInfo, index int, nodeName string) *api.Replication {
-	// Support hub only right now.
-	// if torrent.Spec.Hub == nil {
-	// 	return nil, errors.New("unimplemented")
-	// }
-
+func buildCreationReplication(torrent *api.Torrent, chunk framework.ChunkInfo, nodeName string) *api.Replication {
 	repoName := hubRepoName(torrent.Spec.Hub)
-	name := torrent.Name + "--" + chunk.Name
-	if index != 0 {
-		name += "--" + strconv.Itoa(index)
-	}
+	name := torrent.Name + "--" + chunk.Name + "--" + nodeName
 
 	return &api.Replication{
 		TypeMeta: v1.TypeMeta{
@@ -288,7 +300,7 @@ func buildCreationReplication(torrent *api.Torrent, chunk framework.ChunkInfo, i
 				},
 			},
 			Destination: &api.Target{
-				URI: ptr.To[string](localHost + defaultWorkspace + repoName + "/blobs/" + chunk.Name),
+				URI: ptr.To[string](localHost + workspace + repoName + "/blobs/" + chunk.Name),
 			},
 			SizeBytes: chunk.Size,
 		},
@@ -327,7 +339,7 @@ func buildDeletionReplication(torrent *api.Torrent, chunk framework.ChunkInfo, n
 			NodeName:  nodeName,
 			ChunkName: chunk.Name,
 			Source: api.Target{
-				URI: ptr.To[string](localHost + defaultWorkspace + repoName + "/snapshots/" + chunk.Revision + "/" + chunk.Path),
+				URI: ptr.To[string](localHost + workspace + repoName + "/snapshots/" + chunk.Revision + "/" + chunk.Path),
 			},
 			Destination: nil,
 			SizeBytes:   chunk.Size,

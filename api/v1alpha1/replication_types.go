@@ -20,6 +20,11 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
+const (
+	URI_LOCALHOST = "localhost"
+	URI_REMOTE    = "remote"
+)
+
 // Target represents the to be replicated file info.
 // Source couldn't be nil, but if destination is nil,
 // it means to delete the file.

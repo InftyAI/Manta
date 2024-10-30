@@ -32,12 +32,13 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/log/zap"
 	metricsserver "sigs.k8s.io/controller-runtime/pkg/metrics/server"
 
-	inftyaicomv1alpha1 "github.com/inftyai/manta/api/v1alpha1"
+	api "github.com/inftyai/manta/api/v1alpha1"
 	"github.com/inftyai/manta/pkg/cert"
 	"github.com/inftyai/manta/pkg/controller"
 	"github.com/inftyai/manta/pkg/dispatcher"
 	"github.com/inftyai/manta/pkg/dispatcher/framework"
 	"github.com/inftyai/manta/pkg/dispatcher/plugins/diskaware"
+	"github.com/inftyai/manta/pkg/dispatcher/plugins/gnumber"
 	"github.com/inftyai/manta/pkg/dispatcher/plugins/nodeselector"
 	"github.com/inftyai/manta/pkg/webhook"
 	//+kubebuilder:scaffold:imports
@@ -51,7 +52,7 @@ var (
 func init() {
 	utilruntime.Must(clientgoscheme.AddToScheme(scheme))
 
-	utilruntime.Must(inftyaicomv1alpha1.AddToScheme(scheme))
+	utilruntime.Must(api.AddToScheme(scheme))
 	//+kubebuilder:scaffold:scheme
 }
 
@@ -132,7 +133,7 @@ func setupControllers(mgr ctrl.Manager, certsReady chan struct{}) {
 	<-certsReady
 	setupLog.Info("certs ready")
 
-	dispatcher, err := dispatcher.NewDispatcher([]framework.RegisterFunc{nodeselector.New, diskaware.New}, []framework.RegisterFunc{})
+	dispatcher, err := dispatcher.NewDispatcher([]framework.RegisterFunc{nodeselector.New, diskaware.New}, []framework.RegisterFunc{gnumber.New})
 	if err != nil {
 		setupLog.Error(err, "unable to create dispatcher")
 		os.Exit(1)
