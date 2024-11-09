@@ -70,8 +70,8 @@ type Candidate struct {
 // ScoreCandidate will be used after Score extension point for picking best effort nodes.
 type ScoreCandidate struct {
 	// SourceNodeName represents the the source node name in syncing tasks.
-	// It's nil once in downloading tasks.
-	SourceNodeName *string
+	// It's empty once in downloading tasks.
+	SourceNodeName string
 	// CandidateNodeName represents the target node name.
 	CandidateNodeName string
 	// Score for candidate node.

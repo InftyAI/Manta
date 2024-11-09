@@ -43,7 +43,9 @@ func SendChunk(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "File not found", http.StatusNotFound)
 		return
 	}
-	defer file.Close()
+	defer func() {
+		_ = file.Close()
+	}()
 
 	buffer := make([]byte, buffSize)
 	for {
@@ -76,14 +78,18 @@ func recvChunk(blobPath, snapshotPath, peerName string) error {
 	if err != nil {
 		return err
 	}
-	defer resp.Body.Close()
+	defer func() {
+		_ = resp.Body.Close()
+	}()
 
 	// Use the same path for different peers.
 	file, err := os.Create(blobPath)
 	if err != nil {
 		return err
 	}
-	defer file.Close()
+	defer func() {
+		_ = file.Close()
+	}()
 
 	_, err = io.Copy(file, resp.Body)
 	if err != nil {
