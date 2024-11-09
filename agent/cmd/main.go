@@ -19,6 +19,8 @@ package main
 import (
 	"context"
 	"os"
+	"os/signal"
+	"syscall"
 
 	"github.com/go-logr/logr"
 	corev1 "k8s.io/api/core/v1"
@@ -30,6 +32,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/manager"
 
 	"github.com/inftyai/manta/agent/pkg/controller"
+	"github.com/inftyai/manta/agent/pkg/server"
 	"github.com/inftyai/manta/agent/pkg/task"
 	api "github.com/inftyai/manta/api/v1alpha1"
 )
@@ -81,8 +84,18 @@ func main() {
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 
+	go func() {
+		sigs := make(chan os.Signal, 1)
+		signal.Notify(sigs, syscall.SIGINT, syscall.SIGTERM)
+		<-sigs
+		cancel()
+	}()
+
 	// Background tasks.
 	task.BackgroundTasks(ctx, mgr.GetClient())
+
+	// Run http server to receive sync requests.
+	go server.Run(ctx)
 
 	setupLog.Info("starting manager")
 	if err := mgr.Start(ctrl.SetupSignalHandler()); err != nil {

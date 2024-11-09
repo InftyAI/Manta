@@ -32,4 +32,7 @@ WORKDIR /
 COPY --from=builder /workspace/manager .
 USER 65532:65532
 
+# Expose the http server.
+EXPOSE 9090
+
 ENTRYPOINT ["/manager"]

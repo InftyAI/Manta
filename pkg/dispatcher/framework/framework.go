@@ -30,6 +30,9 @@ type Status struct {
 type StatusCode string
 
 const (
+	MaxScore = 100
+	MinScore = 0
+
 	SuccessStatus       StatusCode = "success"
 	UnschedulableStatus StatusCode = "Unschedulable"
 )
@@ -52,14 +55,41 @@ type ChunkInfo struct {
 	NodeSelector map[string]string
 }
 
+type NodeInfo struct {
+	Name string
+}
+
+// Candidate will be used as the result of Filter extension point and input/output of Score extension point.
+type Candidate struct {
+	// Node represents the candidate nodeTracker.
+	Node api.NodeTracker
+	// Only set after scoring.
+	Score float32
+}
+
+// ScoreCandidate will be used after Score extension point for picking best effort nodes.
+type ScoreCandidate struct {
+	// SourceNodeName represents the the source node name in syncing tasks.
+	// It's empty once in downloading tasks.
+	SourceNodeName string
+	// CandidateNodeName represents the target node name.
+	CandidateNodeName string
+	// Score for candidate node.
+	Score float32
+}
+
 // Framework represents the algo about how to pick the candidates among all the peers.
 type Framework interface {
 	// RegisterPlugins will register the plugins to run.
 	RegisterPlugins([]RegisterFunc) error
 	// RunFilterPlugins will filter out unsatisfied peers.
-	RunFilterPlugins(context.Context, ChunkInfo, []api.NodeTracker, *cache.Cache) []api.NodeTracker
+	// NodeInfo refers to the source node in syncing tasks, it must not be nil in syncing,
+	// on the contrary, it must be nil in downloading tasks.
+	RunFilterPlugins(context.Context, ChunkInfo, *NodeInfo, []api.NodeTracker, *cache.Cache) []Candidate
 	// RunScorePlugins will calculate the scores of all the peers.
-	RunScorePlugins(context.Context, ChunkInfo, []api.NodeTracker, int32, *cache.Cache) []api.NodeTracker
+	// NodeInfo refers to the source node in syncing tasks, it must not be nil in syncing,
+	// on the contrary, it must be nil in downloading tasks.
+	RunScorePlugins(context.Context, ChunkInfo, *NodeInfo, []Candidate, *cache.Cache) []Candidate
 }
 
 // Plugin is the parent type for all the framework plugins.
@@ -77,12 +107,14 @@ type PreFilterPlugin interface {
 type FilterPlugin interface {
 	Plugin
 	// Filter helps to filter out unrelated nodes.
-	Filter(context.Context, ChunkInfo, api.NodeTracker, *cache.Cache) Status
+	// Once NodeInfo is nil, it's a download task, otherwise it's a sync task.
+	Filter(context.Context, ChunkInfo, *NodeInfo, api.NodeTracker, *cache.Cache) Status
 }
 
 type ScorePlugin interface {
 	Plugin
 	// Score gets the score of the nodeTracker, it should be ranged between
 	// 0 and 100.
-	Score(context.Context, ChunkInfo, api.NodeTracker, *cache.Cache) float32
+	// Once NodeInfo is nil, it's a download task, otherwise it's a sync task.
+	Score(context.Context, ChunkInfo, *NodeInfo, api.NodeTracker, *cache.Cache) float32
 }

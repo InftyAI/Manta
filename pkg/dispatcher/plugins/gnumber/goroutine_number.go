@@ -14,36 +14,34 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-package nodeselector
+package gnumber
 
 import (
 	"context"
+	"runtime"
 
 	api "github.com/inftyai/manta/api/v1alpha1"
 	"github.com/inftyai/manta/pkg/dispatcher/cache"
 	"github.com/inftyai/manta/pkg/dispatcher/framework"
 )
 
-var _ framework.FilterPlugin = &NodeSelector{}
+var _ framework.ScorePlugin = &GNumber{}
 
-type NodeSelector struct{}
+const (
+	defaultGoroutineLimit = 1000
+)
+
+type GNumber struct{}
 
 func New() (framework.Plugin, error) {
-	return &NodeSelector{}, nil
+	return &GNumber{}, nil
 }
 
-func (ns *NodeSelector) Name() string {
-	return "NodeSelector"
+func (g *GNumber) Name() string {
+	return "GNumber"
 }
 
-func (ns *NodeSelector) Filter(ctx context.Context, chunkInfo framework.ChunkInfo, _ *framework.NodeInfo, nodeTracker api.NodeTracker, cache *cache.Cache) framework.Status {
-	// In a big cluster, this is serious maybe we should have a preFilter extension point.
-	for k, v := range chunkInfo.NodeSelector {
-		value, ok := nodeTracker.Labels[k]
-		if !ok || value != v {
-			return framework.Status{Code: framework.UnschedulableStatus}
-		}
-	}
-
-	return framework.Status{Code: framework.SuccessStatus}
+func (g *GNumber) Score(_ context.Context, _ framework.ChunkInfo, _ *framework.NodeInfo, _ api.NodeTracker, _ *cache.Cache) float32 {
+	number := runtime.NumGoroutine()
+	return (1 - float32(number)/float32(defaultGoroutineLimit)) * 100
 }

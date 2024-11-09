@@ -24,34 +24,24 @@ import (
 
 func TestGenerateName(t *testing.T) {
 	testCases := []struct {
-		name       string
-		prefix     string
-		wantLength int32
-		wantErr    bool
+		name string
+		want string
 	}{
 		{
-			name:       "with non-empty prefix",
-			prefix:     "prefix",
-			wantLength: 13,
-			wantErr:    false,
+			name: "",
+			want: "",
 		},
 		{
-			name:       "empty prefix",
-			prefix:     "",
-			wantLength: 0,
-			wantErr:    true,
+			name: "node",
+			want: "f8e96",
 		},
 	}
 
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
-			name, err := GenerateName(tc.prefix)
-			if !tc.wantErr && err != nil {
-				t.Fatalf("unexpected error: %v", err)
-			}
-
-			if len(name) != int(tc.wantLength) {
-				t.Fatalf("unexpected length, name: %s", name)
+			got := GenerateName(tc.name)
+			if tc.want != got {
+				t.Fatalf("unexpected value, want: %s, got: %s", tc.want, got)
 			}
 		})
 	}

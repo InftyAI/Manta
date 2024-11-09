@@ -31,7 +31,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/controller"
 	"sigs.k8s.io/controller-runtime/pkg/log"
 
-	agenthandler "github.com/inftyai/manta/agent/pkg/handler"
+	"github.com/inftyai/manta/agent/pkg/handler"
 	api "github.com/inftyai/manta/api/v1alpha1"
 )
 
@@ -82,7 +82,8 @@ func (r *ReplicationReconciler) Reconcile(ctx context.Context, req ctrl.Request)
 	}
 
 	// This may take a long time, the concurrency is controlled by the MaxConcurrentReconciles.
-	if err := agenthandler.HandleReplication(ctx, replication); err != nil {
+	if err := handler.HandleReplication(ctx, replication); err != nil {
+		logger.Error(err, "error to handle replication", "Replication", klog.KObj(replication))
 		return ctrl.Result{}, err
 	} else {
 		if err := r.updateNodeTracker(ctx, replication); err != nil {

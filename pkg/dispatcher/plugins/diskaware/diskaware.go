@@ -29,8 +29,8 @@ var _ framework.FilterPlugin = &DiskAware{}
 var _ framework.ScorePlugin = &DiskAware{}
 
 const (
-	// The default memory size is 30Gi.
-	defaultSizeLimit = "1Ti"
+	// The default memory size is 100Gi.
+	defaultSizeLimit = "100Gi"
 )
 
 type DiskAware struct{}
@@ -43,7 +43,7 @@ func (ds *DiskAware) Name() string {
 	return "DiskAware"
 }
 
-func (ds *DiskAware) Filter(ctx context.Context, chunk framework.ChunkInfo, nodeTracker api.NodeTracker, cache *cache.Cache) framework.Status {
+func (ds *DiskAware) Filter(ctx context.Context, chunk framework.ChunkInfo, _ *framework.NodeInfo, nodeTracker api.NodeTracker, cache *cache.Cache) framework.Status {
 	nodeName := nodeTracker.Name
 	totalSize := cache.NodeTotalSizeBytes(nodeName)
 
@@ -56,7 +56,7 @@ func (ds *DiskAware) Filter(ctx context.Context, chunk framework.ChunkInfo, node
 	return framework.Status{Code: framework.SuccessStatus}
 }
 
-func (ds *DiskAware) Score(ctx context.Context, chunk framework.ChunkInfo, nodeTracker api.NodeTracker, cache *cache.Cache) float32 {
+func (ds *DiskAware) Score(ctx context.Context, chunkInfo framework.ChunkInfo, _ *framework.NodeInfo, nodeTracker api.NodeTracker, cache *cache.Cache) float32 {
 	var totalSize int64
 
 	loadValue := cache.Load(nodeTracker.Name)
@@ -67,7 +67,7 @@ func (ds *DiskAware) Score(ctx context.Context, chunk framework.ChunkInfo, nodeT
 	}
 
 	sizeLimit := sizeLimit(nodeTracker)
-	return (1 - float32(totalSize+chunk.Size)/float32(sizeLimit)) * 100
+	return (1 - float32(totalSize+chunkInfo.Size)/float32(sizeLimit)) * 100
 }
 
 func sizeLimit(nt api.NodeTracker) int64 {

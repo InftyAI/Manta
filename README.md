@@ -6,7 +6,7 @@
 </p>
 
 <h3 align="center">
-A lightweight P2P-based cache system for model distributions.
+A lightweight P2P-based cache system for model distributions on Kubernetes.
 </h3>
 
 [![stability-alpha](https://img.shields.io/badge/stability-alpha-f4d03f.svg)](https://github.com/mkenney/software-guides/blob/master/STABILITY-BADGES.md#alpha)
@@ -16,7 +16,7 @@ A lightweight P2P-based cache system for model distributions.
 [GoReport Widget]: https://goreportcard.com/badge/github.com/inftyai/manta
 [GoReport Status]: https://goreportcard.com/report/github.com/inftyai/manta
 
-_Name Story: the inspiration of the name `Manta` is coming from Dota2, called [Manta Style](https://liquipedia.net/dota2/Manta_Style), which will create 2 images of your hero just like peers in the P2P network._
+_Name Story: the inspiration of the name `Manta` is coming from Dota2, called [Manta Style](https://dota2.fandom.com/wiki/Manta_Style), which will create 2 images of your hero just like peers in the P2P network._
 
 
 ## Architecture
@@ -29,7 +29,7 @@ _Name Story: the inspiration of the name `Manta` is coming from Dota2, called [M
 
 - **Preheat Models**: Models could be preloaded to the cluster, or even specified nodes to accelerate the model serving.
 - **Model Caching**: Once models are downloaded, origin access is no longer necessary, but from other node peers.
-- **Plug Framework**: _Filter_ and _Score_ extension points could be customized with plugins to pick the right peers.
+- **Plugin Framework**: _Filter_ and _Score_ extension points could be extended with your own logic to pick up the best candidates in the form of plugin.
 - **Model LCM**: Manage the model lifecycles automatically with different configurations.
 - **Memory Management(WIP)**: Specify the maximum reserved memory for use, and GC with LRU algorithm.
 
@@ -39,9 +39,9 @@ _Name Story: the inspiration of the name `Manta` is coming from Dota2, called [M
 
 Read the [Installation](./docs//installation.md) for guidance.
 
-### Preload Models
+### Preheat Models
 
-A toy sample to preload the `Qwen/Qwen2-7B-Instruct` model:
+A toy sample to preload the `Qwen/Qwen2.5-0.5B-Instruct` model:
 
 ```yaml
 apiVersion: manta.io/v1alpha1
@@ -51,7 +51,7 @@ metadata:
 spec:
   replicas: 1
   hub:
-    repoID: Qwen/Qwen2-7B-Instruct
+    repoID: Qwen/Qwen2.5-0.5B-Instruct
 ```
 
 If you want to preload the model to specified nodes, use the `NodeSelector`:
@@ -64,10 +64,12 @@ metadata:
 spec:
   replicas: 1
   hub:
-    repoID: Qwen/Qwen2-7B-Instruct
+    repoID: Qwen/Qwen2.5-0.5B-Instruct
   nodeSelector:
     zone: zone-a
 ```
+
+### Delete Models
 
 If you want to remove the model weights once `Torrent` is deleted, set the `ReclaimPolicy=Delete`, default to `Retain`:
 
@@ -79,9 +81,7 @@ metadata:
 spec:
   replicas: 1
   hub:
-    repoID: Qwen/Qwen2-7B-Instruct
-  nodeSelector:
-    zone: zone-a
+    repoID: Qwen/Qwen2.5-0.5B-Instruct
   reclaimPolicy: Delete
 ```
 
@@ -89,16 +89,16 @@ More details refer to the [APIs](https://github.com/InftyAI/Manta/blob/main/api/
 
 ## Roadmap
 
-- GC policy with LRU algorithm
+- Support GC policy with LRU algorithm
 - More integrations with serving projects
 - Support file chunking
 
+## Community
+
+Join us for more discussions:
+
+* **Slack Channel**: [#manta](https://inftyai.slack.com/archives/C07SY8WS45U)
+
 ## Contributions
 
-🚀 All kinds of contributions are welcomed ! Please follow [CONTRIBUTING.md](./CONTRIBUTING.md).
-
-**🎉 Thanks to all these contributors !**
-
-<a href="https://github.com/inftyai/manta/graphs/contributors">
-  <img src="https://contrib.rocks/image?repo=inftyai/manta" />
-</a>
+All kinds of contributions are welcomed ! Please following [CONTRIBUTING.md](./CONTRIBUTING.md).

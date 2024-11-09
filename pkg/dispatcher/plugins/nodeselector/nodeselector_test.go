@@ -73,7 +73,7 @@ func TestFilter(t *testing.T) {
 
 			ns := plugin.(*NodeSelector)
 
-			gotStatus := ns.Filter(ctx, tc.chunk, tc.nodeTracker, nil)
+			gotStatus := ns.Filter(ctx, tc.chunk, nil, tc.nodeTracker, nil)
 			if diff := cmp.Diff(gotStatus, tc.wantStatus); diff != "" {
 				t.Errorf("unexpected status, diff: %v", diff)
 			}

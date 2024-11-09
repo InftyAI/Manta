@@ -84,6 +84,8 @@ type TorrentSpec struct {
 	// +optional
 	Replicas *int32 `json:"replicas,omitempty"`
 	// ReclaimPolicy represents how to handle the file replicas when Torrent is deleted.
+	// Be careful to use the Delete policy because once two Torrents refer to the same
+	// repo, delete one Torrent will remove the whole files.
 	// +kubebuilder:default=Retain
 	// +kubebuilder:validation:Enum={Retain,Delete}
 	// +optional
@@ -97,8 +99,11 @@ type TorrentSpec struct {
 type TrackerState string
 
 const (
-	PendingTrackerState  TrackerState = "Pending"
-	ReadyTrackerState    TrackerState = "Ready"
+	// Pending means the chunk is waiting for downloading.
+	PendingTrackerState TrackerState = "Pending"
+	// Ready means the chunk is ready for downloading or downloaded.
+	ReadyTrackerState TrackerState = "Ready"
+	// Deleting means the chunk is being removed.
 	DeletingTrackerState TrackerState = "Deleting"
 )
 
@@ -167,6 +172,7 @@ type TorrentStatus struct {
 //+kubebuilder:subresource:status
 //+kubebuilder:resource:scope=Cluster
 //+kubebuilder:printcolumn:name="Phase",type=string,JSONPath=".status.phase"
+//+kubebuilder:printcolumn:name="Age",type=date,JSONPath=".metadata.creationTimestamp"
 
 // Torrent is the Schema for the torrents API
 type Torrent struct {
