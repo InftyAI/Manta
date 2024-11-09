@@ -25,7 +25,6 @@ import (
 	"github.com/inftyai/manta/pkg/dispatcher/framework"
 )
 
-var _ framework.FilterPlugin = &GNumber{}
 var _ framework.ScorePlugin = &GNumber{}
 
 const (
@@ -42,14 +41,7 @@ func (g *GNumber) Name() string {
 	return "GNumber"
 }
 
-func (g *GNumber) Filter(ctx context.Context, chunk framework.ChunkInfo, nodeTracker api.NodeTracker, cache *cache.Cache) framework.Status {
-	if cache.ChunkExistInNode(nodeTracker.Name, chunk.Name) {
-		return framework.Status{Code: framework.SuccessStatus}
-	}
-	return framework.Status{Code: framework.UnschedulableStatus}
-}
-
-func (g *GNumber) Score(ctx context.Context, chunk framework.ChunkInfo, nodeTracker api.NodeTracker, cache *cache.Cache) float32 {
+func (g *GNumber) Score(_ context.Context, _ framework.ChunkInfo, _ *framework.NodeInfo, _ api.NodeTracker, _ *cache.Cache) float32 {
 	number := runtime.NumGoroutine()
 	return (1 - float32(number)/float32(defaultGoroutineLimit)) * 100
 }

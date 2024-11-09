@@ -18,11 +18,12 @@ package server
 
 import (
 	"context"
-	"fmt"
 	"net/http"
 	"time"
 
 	"github.com/inftyai/manta/agent/pkg/handler"
+	"github.com/inftyai/manta/api"
+	"sigs.k8s.io/controller-runtime/pkg/log"
 )
 
 func Run(ctx context.Context) {
@@ -31,13 +32,14 @@ func Run(ctx context.Context) {
 
 	mux := http.NewServeMux()
 	mux.HandleFunc("/sync", handler.SendChunk)
-	server := &http.Server{Addr: ":8080", Handler: mux}
+	server := &http.Server{Addr: ":" + api.HttpPort, Handler: mux}
 
 	go func() {
-		fmt.Println("Server started on port 8080")
+		logger := log.FromContext(ctx)
+		logger.Info("Server started on port 9090")
 
 		if err := server.ListenAndServe(); err != nil {
-			fmt.Printf("ListenAndServe error: %s\n", err)
+			logger.Error(err, "listen and server error")
 			cancel()
 		}
 	}()
@@ -47,9 +49,11 @@ func Run(ctx context.Context) {
 	ctxShutdown, cancelShutdown := context.WithTimeout(context.Background(), 5*time.Second)
 	defer cancelShutdown()
 
+	logger := log.FromContext(ctx)
+
 	if err := server.Shutdown(ctxShutdown); err != nil {
-		fmt.Printf("Server shutdown error: %s\n", err)
+		logger.Error(err, "server shutdown error")
 	}
 
-	fmt.Println("Server shutdown successfully")
+	logger.Info("server shutdown successfully")
 }

@@ -6,7 +6,7 @@
 </p>
 
 <h3 align="center">
-A lightweight P2P-based cache system for model distributions.
+A lightweight P2P-based cache system for model distributions on Kubernetes.
 </h3>
 
 [![stability-alpha](https://img.shields.io/badge/stability-alpha-f4d03f.svg)](https://github.com/mkenney/software-guides/blob/master/STABILITY-BADGES.md#alpha)
@@ -39,7 +39,7 @@ _Name Story: the inspiration of the name `Manta` is coming from Dota2, called [M
 
 Read the [Installation](./docs//installation.md) for guidance.
 
-### Preload Models
+### Preheat Models
 
 A toy sample to preload the `Qwen/Qwen2.5-0.5B-Instruct` model:
 
@@ -69,6 +69,8 @@ spec:
     zone: zone-a
 ```
 
+### Delete Models
+
 If you want to remove the model weights once `Torrent` is deleted, set the `ReclaimPolicy=Delete`, default to `Retain`:
 
 ```yaml
@@ -80,8 +82,6 @@ spec:
   replicas: 1
   hub:
     repoID: Qwen/Qwen2.5-0.5B-Instruct
-  nodeSelector:
-    zone: zone-a
   reclaimPolicy: Delete
 ```
 

@@ -36,13 +36,14 @@ func (ns *NodeSelector) Name() string {
 	return "NodeSelector"
 }
 
-func (ns *NodeSelector) Filter(ctx context.Context, chunk framework.ChunkInfo, nodeTracker api.NodeTracker, _ *cache.Cache) framework.Status {
-	// In a big cluster, this is really headache maybe we should have a preFilter extension point.
-	for k, v := range chunk.NodeSelector {
+func (ns *NodeSelector) Filter(ctx context.Context, chunkInfo framework.ChunkInfo, _ *framework.NodeInfo, nodeTracker api.NodeTracker, cache *cache.Cache) framework.Status {
+	// In a big cluster, this is serious maybe we should have a preFilter extension point.
+	for k, v := range chunkInfo.NodeSelector {
 		value, ok := nodeTracker.Labels[k]
 		if !ok || value != v {
 			return framework.Status{Code: framework.UnschedulableStatus}
 		}
 	}
+
 	return framework.Status{Code: framework.SuccessStatus}
 }

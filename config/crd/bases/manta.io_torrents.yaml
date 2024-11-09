@@ -18,6 +18,9 @@ spec:
     - jsonPath: .status.phase
       name: Phase
       type: string
+    - jsonPath: .metadata.creationTimestamp
+      name: Age
+      type: date
     name: v1alpha1
     schema:
       openAPIV3Schema:
@@ -83,8 +86,10 @@ spec:
                 type: object
               reclaimPolicy:
                 default: Retain
-                description: ReclaimPolicy represents how to handle the file replicas
-                  when Torrent is deleted.
+                description: |-
+                  ReclaimPolicy represents how to handle the file replicas when Torrent is deleted.
+                  Be careful to use the Delete policy because once two Torrents refer to the same
+                  repo, delete one Torrent will remove the whole files.
                 enum:
                 - Retain
                 - Delete

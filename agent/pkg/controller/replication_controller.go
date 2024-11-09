@@ -83,6 +83,7 @@ func (r *ReplicationReconciler) Reconcile(ctx context.Context, req ctrl.Request)
 
 	// This may take a long time, the concurrency is controlled by the MaxConcurrentReconciles.
 	if err := handler.HandleReplication(ctx, replication); err != nil {
+		logger.Error(err, "error to handle replication", "Replication", klog.KObj(replication))
 		return ctrl.Result{}, err
 	} else {
 		if err := r.updateNodeTracker(ctx, replication); err != nil {

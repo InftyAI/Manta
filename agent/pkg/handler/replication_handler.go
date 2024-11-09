@@ -42,7 +42,8 @@ func HandleReplication(ctx context.Context, replication *api.Replication) error 
 
 	if replication.Spec.Source.URI != nil {
 		host, _ := parseURI(*replication.Spec.Source.URI)
-		if host == api.URI_REMOTE {
+		// TODO: handel other uris.
+		if host != api.URI_LOCALHOST {
 			return syncChunk(ctx, replication)
 		}
 		// TODO: handle uri with object store.
@@ -77,10 +78,9 @@ func downloadChunk(ctx context.Context, replication *api.Replication) error {
 			// TODO: handle modelScope
 		}
 		// TODO: Handle address
-		logger.Info("download file successfully", "file", filename)
 	}
 
-	// symlink can helps to validate the file is downloaded successfully.
+	// symlink can help to validate the file is downloaded successfully.
 	// TODO: once we support split a file to several chunks, the targetPath should be
 	// changed here, such as targetPath-0001.
 	if err := createSymlink(blobPath, targetPath); err != nil {
@@ -88,7 +88,7 @@ func downloadChunk(ctx context.Context, replication *api.Replication) error {
 		return err
 	}
 
-	logger.Info("create symlink successfully", "file", filename)
+	logger.Info("download chunk successfully", "file", filename)
 	return nil
 }
 
@@ -97,12 +97,19 @@ func syncChunk(ctx context.Context, replication *api.Replication) error {
 
 	logger.Info("start to sync chunks", "Replication", klog.KObj(replication))
 
+	// The source URI looks like remote://node@<path-to-your-file>
 	sourceSplits := strings.Split(*replication.Spec.Source.URI, "://")
+	addresses := strings.Split(sourceSplits[1], "@")
+	nodeName, blobPath := addresses[0], addresses[1]
+	// The destination URI looks like localhost://<path-to-your-file>
 	destSplits := strings.Split(*replication.Spec.Destination.URI, "://")
-	if err := recvChunk(sourceSplits[1], destSplits[1], replication.Spec.NodeName); err != nil {
+
+	if err := recvChunk(blobPath, destSplits[1], nodeName); err != nil {
 		logger.Error(err, "failed to sync chunk")
 		return err
 	}
+
+	logger.Info("sync chunk successfully", "Replication", klog.KObj(replication), "target", destSplits[0])
 	return nil
 }
 

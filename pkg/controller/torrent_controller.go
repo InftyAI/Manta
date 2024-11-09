@@ -72,22 +72,22 @@ func (r *TorrentReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ct
 		return ctrl.Result{}, client.IgnoreNotFound(err)
 	}
 
-	logger.Info("reconcile Torrent", "Torrent", klog.KObj(torrent))
+	logger.Info("reconcile Torrent")
 
 	// Only delete chunks when torrent ready, or will lead to unexpected behaviors.
 	// We may change this in the future.
 	if torrentReady(torrent) && torrentDeleting(torrent) {
-		logger.Info("start to handle torrent deletion", "Torrent", klog.KObj(torrent))
+		logger.Info("start to handle torrent deletion")
 
 		if err := r.handleDeletion(ctx, torrent); err != nil {
-			logger.Error(err, "failed to handle deletion", "Torrent", klog.KObj(torrent))
+			logger.Error(err, "failed to handle deletion")
 			return ctrl.Result{}, err
 		}
 		return ctrl.Result{}, nil
 	}
 
 	if torrentReady(torrent) {
-		logger.Info("start to handle torrent ready", "Torrent", klog.KObj(torrent))
+		logger.Info("start to handle torrent ready")
 
 		if err := r.handleReady(ctx, torrent); err != nil {
 			logger.Error(err, "failed to handle ready status", "Torrent", klog.KObj(torrent))
@@ -97,10 +97,10 @@ func (r *TorrentReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ct
 	}
 
 	if torrent.Status.Repo == nil {
-		logger.Info("start to handle torrent creation", "Torrent", klog.KObj(torrent))
+		logger.Info("start to handle torrent creation")
 
 		if err := r.handleCreation(ctx, torrent); err != nil {
-			logger.Error(err, "failed to handle creation", "Torrent", klog.KObj(torrent))
+			logger.Error(err, "failed to handle creation")
 			return ctrl.Result{}, err
 		}
 	}
@@ -110,19 +110,19 @@ func (r *TorrentReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ct
 		return ctrl.Result{}, err
 	}
 
-	// handleDispatcher is idempotent.
+	// handleDispatcher should be idempotent.
 	torrentStatusChanged, err := r.handleDispatcher(ctx, torrent, nodeTrackers.Items)
 	if err != nil {
-		logger.Error(err, "failed to dispatcher torrent", "Torrent", klog.KObj(torrent))
+		logger.Error(err, "failed to dispatcher torrent")
 		return ctrl.Result{}, err
 	}
 
-	// set the condition.
 	replications, err := r.replications(ctx, torrent)
 	if err != nil {
 		return ctrl.Result{}, err
 	}
 
+	// set the condition.
 	conditionChanged := setTorrentCondition(torrent, replications)
 	if torrentStatusChanged || conditionChanged {
 		return ctrl.Result{}, r.Status().Update(ctx, torrent)
@@ -212,10 +212,24 @@ func (r *TorrentReconciler) handleReady(ctx context.Context, torrent *api.Torren
 
 func (r *TorrentReconciler) handleDispatcher(ctx context.Context, torrent *api.Torrent, nodeTrackers []api.NodeTracker) (statusChanged bool, err error) {
 	// Do not delete the Replication manually or they will be created again.
-	replications, statusChanged, err := r.dispatcher.PrepareReplications(ctx, torrent, nodeTrackers)
+	replications, statusChanged, firstTime, err := r.dispatcher.PrepareReplications(ctx, torrent, nodeTrackers)
 	if err != nil {
 		return false, err
 	}
+
+	// We may have no replication to create, e.g. all the chunks are replicated.
+	// Set the Torrent to ready directly.
+	if len(replications) == 0 && firstTime {
+		condition := metav1.Condition{
+			Type:    api.ReadyConditionType,
+			Status:  metav1.ConditionTrue,
+			Reason:  "Replicated",
+			Message: "All chunks are replicated",
+		}
+		statusChanged = statusChanged || setTorrentConditionTo(torrent, condition)
+		return statusChanged, nil
+	}
+
 	for _, rep := range replications {
 		// If Replication is duplicated, just ignore here.
 		if err := r.Client.Create(ctx, rep); err != nil && !errors.IsAlreadyExists(err) {
@@ -237,15 +251,8 @@ func (r *TorrentReconciler) replications(ctx context.Context, torrent *api.Torre
 }
 
 func (r *TorrentReconciler) Create(e event.CreateEvent) bool {
-	torrent, match := e.Object.(*api.Torrent)
-	if !match {
-		return false
-	}
-
-	logger := log.FromContext(context.Background()).WithValues("Torrent", klog.KObj(torrent))
-	logger.V(2).Info("Torrent create event")
-
-	return true
+	_, match := e.Object.(*api.Torrent)
+	return match
 }
 
 func (r *TorrentReconciler) Update(e event.UpdateEvent) bool {
@@ -299,8 +306,7 @@ func setTorrentCondition(torrent *api.Torrent, replications []api.Replication) (
 			Reason:  "Pending",
 			Message: "Waiting for Replication creations",
 		}
-		torrent.Status.Phase = ptr.To[string](api.PendingConditionType)
-		return apimeta.SetStatusCondition(&torrent.Status.Conditions, condition)
+		return setTorrentConditionTo(torrent, condition)
 	}
 
 	// TODO: once we support delete torrent in unready state, we should change this.
@@ -311,8 +317,7 @@ func setTorrentCondition(torrent *api.Torrent, replications []api.Replication) (
 			Reason:  "Reclaiming",
 			Message: "Deleting chunks",
 		}
-		torrent.Status.Phase = ptr.To[string](api.ReclaimingConditionType)
-		return apimeta.SetStatusCondition(&torrent.Status.Conditions, condition)
+		return setTorrentConditionTo(torrent, condition)
 	}
 
 	if apimeta.IsStatusConditionTrue(torrent.Status.Conditions, api.DownloadConditionType) && replicationsReady(replications) {
@@ -322,8 +327,7 @@ func setTorrentCondition(torrent *api.Torrent, replications []api.Replication) (
 			Reason:  "Ready",
 			Message: "Download chunks successfully",
 		}
-		torrent.Status.Phase = ptr.To[string](api.ReadyConditionType)
-		return apimeta.SetStatusCondition(&torrent.Status.Conditions, condition)
+		return setTorrentConditionTo(torrent, condition)
 	}
 
 	if torrentDownloading(replications) {
@@ -333,11 +337,15 @@ func setTorrentCondition(torrent *api.Torrent, replications []api.Replication) (
 			Reason:  "Downloading",
 			Message: "Downloading chunks",
 		}
-		torrent.Status.Phase = ptr.To[string](api.DownloadConditionType)
-		return apimeta.SetStatusCondition(&torrent.Status.Conditions, condition)
+		return setTorrentConditionTo(torrent, condition)
 	}
 
 	return false
+}
+
+func setTorrentConditionTo(torrent *api.Torrent, condition metav1.Condition) (changed bool) {
+	torrent.Status.Phase = ptr.To[string](condition.Type)
+	return apimeta.SetStatusCondition(&torrent.Status.Conditions, condition)
 }
 
 func torrentDownloading(replications []api.Replication) bool {

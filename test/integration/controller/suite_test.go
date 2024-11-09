@@ -106,7 +106,7 @@ var _ = BeforeSuite(func() {
 	})
 	Expect(err).ToNot(HaveOccurred())
 
-	dispatcher, err := dispatcher.NewDispatcher([]framework.RegisterFunc{nodeselector.New, diskaware.New}, []framework.RegisterFunc{gnumber.New})
+	dispatcher, err := dispatcher.NewDispatcher([]framework.RegisterFunc{nodeselector.New, diskaware.New, gnumber.New})
 	Expect(err).ToNot(HaveOccurred())
 
 	torrentController := controller.NewTorrentReconciler(mgr.GetClient(), mgr.GetScheme(), dispatcher)

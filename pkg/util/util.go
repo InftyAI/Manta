@@ -17,28 +17,21 @@ limitations under the License.
 package util
 
 import (
-	"crypto/rand"
-	"encoding/base32"
-	"errors"
-	"strings"
+	"crypto/sha1"
+	"encoding/hex"
 )
 
-func GenerateName(prefix string) (string, error) {
-	if prefix == "" {
-		return "", errors.New("no prefix")
+func GenerateName(name string) string {
+	if name == "" {
+		return ""
 	}
 
-	const suffixLength = 5
-	randomBytes := make([]byte, suffixLength)
-	_, err := rand.Read(randomBytes)
-	if err != nil {
-		return "", err
-	}
+	hasher := sha1.New()
+	hasher.Write([]byte(name))
+	bytes := hasher.Sum(nil)
 
-	suffix := base32.StdEncoding.WithPadding(base32.NoPadding).EncodeToString(randomBytes)
-	suffix = strings.ToLower(suffix)
-
-	return prefix + "--" + suffix[0:suffixLength], nil
+	hashStr := hex.EncodeToString(bytes)
+	return hashStr[0:5]
 }
 
 // toDelete includes string in old but not in new,

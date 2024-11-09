@@ -21,7 +21,6 @@ import (
 
 	api "github.com/inftyai/manta/api/v1alpha1"
 	"github.com/inftyai/manta/pkg/dispatcher/cache"
-	"github.com/inftyai/manta/pkg/util"
 	"sigs.k8s.io/controller-runtime/pkg/log"
 )
 
@@ -45,7 +44,7 @@ func (df *DefaultFramework) RegisterPlugins(fns []RegisterFunc) error {
 	return nil
 }
 
-func (df *DefaultFramework) RunFilterPlugins(ctx context.Context, chunk ChunkInfo, nodeTrackers []api.NodeTracker, cache *cache.Cache) (candidates []api.NodeTracker) {
+func (df *DefaultFramework) RunFilterPlugins(ctx context.Context, chunk ChunkInfo, nodeInfo *NodeInfo, nodeTrackers []api.NodeTracker, cache *cache.Cache) (candidates []Candidate) {
 	ctx, cancel := context.WithCancel(ctx)
 	defer cancel()
 
@@ -57,7 +56,7 @@ func (df *DefaultFramework) RunFilterPlugins(ctx context.Context, chunk ChunkInf
 	for _, nt := range nodeTrackers {
 		for _, plugin := range df.registry {
 			if p, ok := plugin.(FilterPlugin); ok {
-				status = p.Filter(ctx, chunk, nt, cache)
+				status = p.Filter(ctx, chunk, nodeInfo, nt, cache)
 				if status.Code != SuccessStatus {
 					logger.Info("filter out plugin", "plugin", plugin.Name(), "node", nt.Name, "file", chunk.Path, "chunk", chunk.Name)
 					break
@@ -65,44 +64,31 @@ func (df *DefaultFramework) RunFilterPlugins(ctx context.Context, chunk ChunkInf
 			}
 		}
 		if status.Code == SuccessStatus {
-			candidates = append(candidates, nt)
+			candidates = append(candidates, Candidate{Node: nt})
 		}
 	}
 
 	return candidates
 }
-
-func (df *DefaultFramework) RunScorePlugins(ctx context.Context, chunk ChunkInfo, nodeTrackers []api.NodeTracker, replicas int32, cache *cache.Cache) (candidates []api.NodeTracker) {
+func (df *DefaultFramework) RunScorePlugins(ctx context.Context, chunk ChunkInfo, nodeInfo *NodeInfo, candidates []Candidate, cache *cache.Cache) []Candidate {
 	logger := log.FromContext(ctx)
-
-	if len(nodeTrackers) <= int(replicas) {
-		logger.Info("return all candidates", "file", chunk.Path, "chunk", chunk.Name)
-		return nodeTrackers
-	}
-
 	ctx, cancel := context.WithCancel(ctx)
 	defer cancel()
 
-	scores := make([]float32, len(nodeTrackers))
-	for i, nt := range nodeTrackers {
+	for i, nt := range candidates {
 		var totalScore float32
 
 		for _, plugin := range df.registry {
 			if p, ok := plugin.(ScorePlugin); ok {
-				score := p.Score(ctx, chunk, nt, cache)
+				score := p.Score(ctx, chunk, nodeInfo, nt.Node, cache)
 
-				logger.Info("calculate plugin score", "plugin", plugin.Name(), "node", nt.Name, "file", chunk.Path, "chunk", chunk.Name, "score", score)
+				logger.V(10).Info("calculate plugin score", "plugin", plugin.Name(), "node", nt.Node.Name, "file", chunk.Path, "chunk", chunk.Name, "score", score)
 				totalScore += standardScore(score)
 			}
 		}
-		scores[i] = totalScore
+		candidates[i].Score = totalScore
 	}
 
-	indices := util.TopNIndices(scores, int(replicas))
-
-	for _, index := range indices {
-		candidates = append(candidates, nodeTrackers[index])
-	}
 	return candidates
 }
 

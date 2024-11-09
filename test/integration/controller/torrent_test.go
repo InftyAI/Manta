@@ -426,5 +426,55 @@ var _ = ginkgo.Describe("Torrent controller test", func() {
 				},
 			},
 		}),
+		ginkgo.Entry("Recreate the same Torrent", &testValidatingCase{
+			precondition: func() error {
+				nodeTracker := wrapper.MakeNodeTracker("node1").Obj()
+				return k8sClient.Create(ctx, nodeTracker)
+			},
+			makeTorrent: func() *api.Torrent {
+				return wrapper.MakeTorrent("qwen2-7b-gguf").Hub("Huggingface", "Qwen/Qwen2-0.5B-Instruct-GGUF", "qwen2-0_5b-instruct-q5_k_m.gguf").Obj()
+			},
+			updates: []*update{
+				{
+					updateFunc: func(torrent *api.Torrent) {
+						gomega.Expect(k8sClient.Create(ctx, torrent)).To(gomega.Succeed())
+					},
+					checkFunc: func(ctx context.Context, k8sClient client.Client, torrent *api.Torrent) {
+						validation.ValidateTorrentStatusEqualTo(ctx, k8sClient, torrent, api.PendingConditionType, "Pending", metav1.ConditionTrue, nil)
+						validation.ValidateReplicationsNumberEqualTo(ctx, k8sClient, torrent, util.TorrentChunkNumber(torrent))
+					},
+				},
+				{
+					updateFunc: func(torrent *api.Torrent) {
+						util.UpdateReplicationsCondition(ctx, k8sClient, torrent, api.DownloadConditionType)
+					},
+					checkFunc: func(ctx context.Context, k8sClient client.Client, torrent *api.Torrent) {
+						validation.ValidateTorrentStatusEqualTo(ctx, k8sClient, torrent, api.DownloadConditionType, "Downloading", metav1.ConditionTrue, nil)
+					},
+				},
+				{
+					updateFunc: func(torrent *api.Torrent) {
+						util.UpdateReplicationsCondition(ctx, k8sClient, torrent, api.ReadyConditionType)
+					},
+					checkFunc: func(ctx context.Context, k8sClient client.Client, torrent *api.Torrent) {
+						validation.ValidateTorrentStatusEqualTo(ctx, k8sClient, torrent, api.ReadyConditionType, "Ready", metav1.ConditionTrue, nil)
+						validation.ValidateAllReplicationsNodeNameEqualTo(ctx, k8sClient, torrent, "node1")
+						validation.ValidateReplicationsNumberEqualTo(ctx, k8sClient, torrent, 0)
+					},
+				},
+				{
+					updateFunc: func(torrent *api.Torrent) {
+						// Recreate the same model torrent.
+						newTorrent := wrapper.MakeTorrent("qwen2-7b-gguf-2").Hub("Huggingface", "Qwen/Qwen2-0.5B-Instruct-GGUF", "qwen2-0_5b-instruct-q5_k_m.gguf").Obj()
+						gomega.Expect(k8sClient.Create(ctx, newTorrent)).To(gomega.Succeed())
+					},
+					checkFunc: func(ctx context.Context, k8sClient client.Client, torrent *api.Torrent) {
+						// Already replicated, will be set to ready directly.
+						validation.ValidateTorrentStatusEqualTo(ctx, k8sClient, torrent, api.ReadyConditionType, "Ready", metav1.ConditionTrue, nil)
+						validation.ValidateReplicationsNumberEqualTo(ctx, k8sClient, torrent, 0)
+					},
+				},
+			},
+		}),
 	)
 })

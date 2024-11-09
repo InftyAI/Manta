@@ -100,7 +100,7 @@ func TestFilter(t *testing.T) {
 
 			ns := plugin.(*DiskAware)
 
-			gotStatus := ns.Filter(ctx, tc.chunk, tc.nodeTracker, tc.cache())
+			gotStatus := ns.Filter(ctx, tc.chunk, nil, tc.nodeTracker, tc.cache())
 			if diff := cmp.Diff(gotStatus, tc.wantStatus); diff != "" {
 				t.Errorf("unexpected status, diff: %v", diff)
 			}
@@ -160,7 +160,7 @@ func TestScore(t *testing.T) {
 
 			ns := plugin.(*DiskAware)
 
-			gotScore := ns.Score(ctx, tc.chunk, tc.nodeTracker, tc.cache())
+			gotScore := ns.Score(ctx, tc.chunk, nil, tc.nodeTracker, tc.cache())
 			if math.Abs(float64(gotScore-tc.wantScore)) > 0.01 {
 				t.Errorf("unexpected score, want %v, got %v", tc.wantScore, gotScore)
 			}

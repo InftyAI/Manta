@@ -20,7 +20,7 @@ import (
 	"sort"
 )
 
-func SetContains(values []string, value string) bool {
+func SetContains[T comparable](values []T, value T) bool {
 	for i := range values {
 		if value == values[i] {
 			return true

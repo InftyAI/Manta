@@ -21,6 +21,8 @@ import (
 	"io"
 	"net/http"
 	"os"
+
+	"github.com/inftyai/manta/api"
 )
 
 const (
@@ -30,6 +32,7 @@ const (
 // SendChunk will send the chunk content via http request.
 func SendChunk(w http.ResponseWriter, r *http.Request) {
 	path := r.URL.Query().Get("path")
+
 	if path == "" {
 		http.Error(w, "path is required", http.StatusBadRequest)
 		return
@@ -45,25 +48,29 @@ func SendChunk(w http.ResponseWriter, r *http.Request) {
 	buffer := make([]byte, buffSize)
 	for {
 		n, err := file.Read(buffer)
+		if err != nil {
+			if err == io.EOF {
+				break
+			} else {
+				fmt.Println("Error reading file")
+				http.Error(w, "Error reading file", http.StatusInternalServerError)
+				return
+			}
+		}
+
 		if n > 0 {
 			_, writeErr := w.Write(buffer[:n])
 			if writeErr != nil {
 				fmt.Println("Error writing to response:", writeErr)
+				http.Error(w, "Error writing to response", http.StatusInternalServerError)
 				return
 			}
-		}
-		if err == io.EOF {
-			break
-		}
-		if err != nil {
-			http.Error(w, "Error reading file", http.StatusInternalServerError)
-			return
 		}
 	}
 }
 
 func recvChunk(blobPath, snapshotPath, peerName string) error {
-	url := fmt.Sprintf("http://%s:8080/sync?path=%s", peerName, blobPath)
+	url := fmt.Sprintf("http://%s:%s/sync?path=%s", peerName, api.HttpPort, blobPath)
 
 	resp, err := http.Get(url)
 	if err != nil {
@@ -87,6 +94,5 @@ func recvChunk(blobPath, snapshotPath, peerName string) error {
 		return err
 	}
 
-	fmt.Println("Chunk synced successfully")
 	return nil
 }
