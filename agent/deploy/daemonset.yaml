@@ -26,7 +26,7 @@ spec:
       containers:
       - name: agent
         # image: inftyai/manta-agent:v0.0.1
-        image: inftyai/test:manta-agent-110811
+        image: inftyai/test:manta-agent-111001
         ports:
         - containerPort: 9090
         resources:

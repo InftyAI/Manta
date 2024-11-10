@@ -96,11 +96,8 @@ spec:
                 type: string
               replicas:
                 default: 1
-                description: |-
-                  Replicas represents the replication number of each object.
-                  The real Replicas number could be greater than the desired Replicas.
+                description: Replicas represents the replication number of each object.
                 format: int32
-                maximum: 99
                 type: integer
             type: object
           status:
