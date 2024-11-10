@@ -9,7 +9,6 @@ metadata:
     app.kubernetes.io/created-by: controller
   name: torrent-sample
 spec:
-  replicas: 2
   reclaimPolicy: Delete
   # nodeSelector:
   #   zone: zone1

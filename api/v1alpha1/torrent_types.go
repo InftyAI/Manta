@@ -78,9 +78,7 @@ type TorrentSpec struct {
 	// URI *URIProtocol `json:"uri,omitempty"`
 
 	// Replicas represents the replication number of each object.
-	// The real Replicas number could be greater than the desired Replicas.
 	// +kubebuilder:default=1
-	// +kubebuilder:validation:Maximum=99
 	// +optional
 	Replicas *int32 `json:"replicas,omitempty"`
 	// ReclaimPolicy represents how to handle the file replicas when Torrent is deleted.

@@ -27,11 +27,11 @@ _Name Story: the inspiration of the name `Manta` is coming from Dota2, called [M
 
 ## Features Overview
 
-- **Preheat Models**: Models could be preloaded to the cluster, or even specified nodes to accelerate the model serving.
-- **Model Caching**: Once models are downloaded, origin access is no longer necessary, but from other node peers.
-- **Plugin Framework**: _Filter_ and _Score_ extension points could be extended with your own logic to pick up the best candidates in the form of plugin.
-- **Model LCM**: Manage the model lifecycles automatically with different configurations.
-- **Memory Management(WIP)**: Specify the maximum reserved memory for use, and GC with LRU algorithm.
+- **Model Preheat**: Models could be preloaded to clusters, to specified nodes to accelerate the model serving.
+- **Model Cache**: Models will be cached after downloading for faster model loading.
+- **Model Lifecycle Management**: Manage the model lifecycle automatically with different policies, like `Retain` or `Delete`.
+- **Plugin Framework**: _Filter_ and _Score_ plugins could be extended to pick up the best candidates.
+- **Memory Management(WIP)**: Manage the reserved memories for caching, together with LRU algorithm for GC.
 
 ## Quick Start
 
@@ -41,7 +41,7 @@ Read the [Installation](./docs//installation.md) for guidance.
 
 ### Preheat Models
 
-A toy sample to preload the `Qwen/Qwen2.5-0.5B-Instruct` model:
+A sample to preload the `Qwen/Qwen2.5-0.5B-Instruct` model:
 
 ```yaml
 apiVersion: manta.io/v1alpha1
@@ -49,7 +49,6 @@ kind: Torrent
 metadata:
   name: torrent-sample
 spec:
-  replicas: 1
   hub:
     repoID: Qwen/Qwen2.5-0.5B-Instruct
 ```
@@ -62,7 +61,6 @@ kind: Torrent
 metadata:
   name: torrent-sample
 spec:
-  replicas: 1
   hub:
     repoID: Qwen/Qwen2.5-0.5B-Instruct
   nodeSelector:
@@ -79,19 +77,12 @@ kind: Torrent
 metadata:
   name: torrent-sample
 spec:
-  replicas: 1
   hub:
     repoID: Qwen/Qwen2.5-0.5B-Instruct
   reclaimPolicy: Delete
 ```
 
 More details refer to the [APIs](https://github.com/InftyAI/Manta/blob/main/api/v1alpha1/torrent_types.go).
-
-## Roadmap
-
-- Support GC policy with LRU algorithm
-- More integrations with serving projects
-- Support file chunking
 
 ## Community
 
