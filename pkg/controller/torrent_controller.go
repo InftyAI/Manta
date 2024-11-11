@@ -74,8 +74,7 @@ func (r *TorrentReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ct
 
 	logger.Info("reconcile Torrent")
 
-	// Only delete chunks when torrent ready, or will lead to unexpected behaviors.
-	// We may change this in the future.
+	// TODO: delete torrent at anytime.
 	if torrentReady(torrent) && torrentDeleting(torrent) {
 		logger.Info("start to handle torrent deletion")
 
@@ -223,11 +222,12 @@ func (r *TorrentReconciler) handleDispatcher(ctx context.Context, torrent *api.T
 		condition := metav1.Condition{
 			Type:    api.ReadyConditionType,
 			Status:  metav1.ConditionTrue,
-			Reason:  "Replicated",
-			Message: "All chunks are replicated",
+			Reason:  "Ready",
+			Message: "All chunks are replicated already",
 		}
-		statusChanged = statusChanged || setTorrentConditionTo(torrent, condition)
-		return statusChanged, nil
+		if setTorrentConditionTo(torrent, condition) {
+			return false, r.Status().Update(ctx, torrent)
+		}
 	}
 
 	for _, rep := range replications {
@@ -309,7 +309,6 @@ func setTorrentCondition(torrent *api.Torrent, replications []api.Replication) (
 		return setTorrentConditionTo(torrent, condition)
 	}
 
-	// TODO: once we support delete torrent in unready state, we should change this.
 	if torrentReady(torrent) && torrentDeleting(torrent) {
 		condition := metav1.Condition{
 			Type:    api.ReclaimingConditionType,
@@ -320,22 +319,26 @@ func setTorrentCondition(torrent *api.Torrent, replications []api.Replication) (
 		return setTorrentConditionTo(torrent, condition)
 	}
 
-	if apimeta.IsStatusConditionTrue(torrent.Status.Conditions, api.DownloadConditionType) && replicationsReady(replications) {
+	if torrentReady(torrent) {
+		return false
+	}
+
+	if apimeta.IsStatusConditionTrue(torrent.Status.Conditions, api.ReplicateConditionType) && replicationsReady(replications) {
 		condition := metav1.Condition{
 			Type:    api.ReadyConditionType,
 			Status:  metav1.ConditionTrue,
 			Reason:  "Ready",
-			Message: "Download chunks successfully",
+			Message: "Chunks replicated successfully",
 		}
 		return setTorrentConditionTo(torrent, condition)
 	}
 
 	if torrentDownloading(replications) {
 		condition := metav1.Condition{
-			Type:    api.DownloadConditionType,
+			Type:    api.ReplicateConditionType,
 			Status:  metav1.ConditionTrue,
-			Reason:  "Downloading",
-			Message: "Downloading chunks",
+			Reason:  "Replicating",
+			Message: "Replicating chunks",
 		}
 		return setTorrentConditionTo(torrent, condition)
 	}
@@ -350,8 +353,8 @@ func setTorrentConditionTo(torrent *api.Torrent, condition metav1.Condition) (ch
 
 func torrentDownloading(replications []api.Replication) bool {
 	for _, replication := range replications {
-		// If one replication is in downloading, then yes.
-		if apimeta.IsStatusConditionTrue(replication.Status.Conditions, api.DownloadConditionType) {
+		// If one replication is in replicating, then yes.
+		if apimeta.IsStatusConditionTrue(replication.Status.Conditions, api.ReplicateConditionType) {
 			return true
 		}
 	}

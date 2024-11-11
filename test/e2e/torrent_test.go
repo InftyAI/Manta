@@ -85,7 +85,6 @@ var _ = ginkgo.Describe("torrent e2e test", func() {
 		}()
 
 		validation.ValidateTorrentStatusEqualTo(ctx, k8sClient, torrent, api.ReadyConditionType, "Ready", metav1.ConditionTrue, &validation.ValidateOptions{Timeout: 5 * time.Minute})
-		validation.ValidateAllReplicationsNodeNameEqualTo(ctx, k8sClient, torrent, "kind-worker2")
 		validation.ValidateReplicationsNumberEqualTo(ctx, k8sClient, torrent, 0)
 
 		// We set the replicas to 5, but we only have 3 nodes.

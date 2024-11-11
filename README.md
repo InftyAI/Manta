@@ -1,7 +1,7 @@
 <p align="center">
   <picture>
     <source media="(prefers-color-scheme: dark)" srcset="https://raw.githubusercontent.com/inftyai/manta/main/docs/assets/logo.png">
-    <img alt="llmaz" src="https://raw.githubusercontent.com/inftyai/manta/main/docs/assets/logo.png" width="35%">
+    <img alt="manta" src="https://raw.githubusercontent.com/inftyai/manta/main/docs/assets/logo.png" width="35%">
   </picture>
 </p>
 

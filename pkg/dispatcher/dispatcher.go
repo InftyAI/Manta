@@ -67,10 +67,8 @@ func (d *Dispatcher) snapshot() *cache.Cache {
 // or we have to introduce file lock when downloading chunks.
 func (d *Dispatcher) PrepareReplications(ctx context.Context, torrent *api.Torrent, nodeTrackers []api.NodeTracker) (replications []*api.Replication, torrentStatusChanged bool, firstTime bool, err error) {
 	if torrent.Status.Repo == nil {
-		return nil, false, false, fmt.Errorf("repo is nil")
+		return nil, false, false, fmt.Errorf("repo is nil, couldn't dispatch chunks")
 	}
-
-	logger := log.FromContext(ctx)
 
 	// snapshot will deepcopy the cache.
 	// Note: because we list the nodeTrackers before so there maybe a bit difference
@@ -95,14 +93,15 @@ func (d *Dispatcher) PrepareReplications(ctx context.Context, torrent *api.Torre
 			}
 
 			if d.cache.ChunkExist(chunk.Name) {
-				newReplications := d.schedulingSyncChunk(ctx, torrent, chunk, nodeTrackers, cache)
+				newReplications, err := d.schedulingSyncChunk(ctx, torrent, chunk, nodeTrackers, cache)
+				if err != nil {
+					return nil, false, false, err
+				}
 				replications = append(replications, newReplications...)
 			} else {
 				newReplications, err := d.schedulingDownloadChunk(ctx, torrent, chunk, nodeTrackers, cache)
 				if err != nil {
-					// Once err, ignore for this dispatching cycle, will retry for next cycle.
-					logger.Error(err, "failed to dispatch chunk for downloading", "chunk", chunk.Name)
-					continue
+					return nil, false, false, err
 				}
 				replications = append(replications, newReplications...)
 			}
@@ -158,7 +157,7 @@ func (d *Dispatcher) schedulingDownloadChunk(ctx context.Context, torrent *api.T
 	candidates := d.RunFilterPlugins(ctx, chunk, nil, nodeTrackers, cache)
 
 	if len(candidates) == 0 {
-		return nil, fmt.Errorf("no available candidate")
+		return nil, fmt.Errorf("no candidate available")
 	}
 
 	candidates = d.RunScorePlugins(ctx, chunk, nil, candidates, cache)
@@ -183,7 +182,7 @@ func (d *Dispatcher) schedulingDownloadChunk(ctx context.Context, torrent *api.T
 	return
 }
 
-func (d *Dispatcher) schedulingSyncChunk(ctx context.Context, torrent *api.Torrent, chunk framework.ChunkInfo, nodeTrackers []api.NodeTracker, cache *cache.Cache) (replications []*api.Replication) {
+func (d *Dispatcher) schedulingSyncChunk(ctx context.Context, torrent *api.Torrent, chunk framework.ChunkInfo, nodeTrackers []api.NodeTracker, cache *cache.Cache) (replications []*api.Replication, err error) {
 	logger := log.FromContext(ctx).WithValues("chunk", chunk.Name)
 	logger.Info("start to schedule sync chunk")
 
@@ -221,7 +220,11 @@ func (d *Dispatcher) schedulingSyncChunk(ctx context.Context, torrent *api.Torre
 	// We have enough replicated nodes.
 	if replicas <= 0 {
 		logger.V(1).Info("Have enough replicas, no need to sync anymore")
-		return nil
+		return nil, nil
+	}
+
+	if len(totalCandidates) == 0 {
+		return nil, fmt.Errorf("no candidate available")
 	}
 
 	if len(totalCandidates) > int(replicas) {
@@ -242,7 +245,7 @@ func (d *Dispatcher) schedulingSyncChunk(ctx context.Context, torrent *api.Torre
 		}, candidate.CandidateNodeName)
 	}
 
-	return replications
+	return replications, nil
 }
 
 func (d *Dispatcher) UpdateNodeTracker(old *api.NodeTracker, new *api.NodeTracker) {
