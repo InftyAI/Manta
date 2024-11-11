@@ -23,14 +23,17 @@ import (
 	"path/filepath"
 	"strings"
 
+	corev1 "k8s.io/api/core/v1"
+	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/klog/v2"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/log"
 
 	api "github.com/inftyai/manta/api/v1alpha1"
 )
 
 // This only happens when replication not ready.
-func HandleReplication(ctx context.Context, replication *api.Replication) error {
+func HandleReplication(ctx context.Context, client client.Client, replication *api.Replication) error {
 	// If destination is nil, the address must not be localhost.
 	if replication.Spec.Destination == nil {
 		return deleteChunk(ctx, replication)
@@ -44,7 +47,7 @@ func HandleReplication(ctx context.Context, replication *api.Replication) error 
 		host, _ := parseURI(*replication.Spec.Source.URI)
 		// TODO: handel other uris.
 		if host != api.URI_LOCALHOST {
-			return syncChunk(ctx, replication)
+			return syncChunk(ctx, client, replication)
 		}
 		// TODO: handle uri with object store.
 	}
@@ -92,7 +95,7 @@ func downloadChunk(ctx context.Context, replication *api.Replication) error {
 	return nil
 }
 
-func syncChunk(ctx context.Context, replication *api.Replication) error {
+func syncChunk(ctx context.Context, client client.Client, replication *api.Replication) error {
 	logger := log.FromContext(ctx)
 
 	logger.Info("start to sync chunks", "Replication", klog.KObj(replication))
@@ -101,10 +104,15 @@ func syncChunk(ctx context.Context, replication *api.Replication) error {
 	sourceSplits := strings.Split(*replication.Spec.Source.URI, "://")
 	addresses := strings.Split(sourceSplits[1], "@")
 	nodeName, blobPath := addresses[0], addresses[1]
+	nodeIP, err := nodeIP(ctx, client, nodeName)
+	if err != nil {
+		return err
+	}
+
 	// The destination URI looks like localhost://<path-to-your-file>
 	destSplits := strings.Split(*replication.Spec.Destination.URI, "://")
 
-	if err := recvChunk(blobPath, destSplits[1], nodeName); err != nil {
+	if err := recvChunk(blobPath, destSplits[1], nodeIP); err != nil {
 		logger.Error(err, "failed to sync chunk")
 		return err
 	}
@@ -124,9 +132,15 @@ func deleteChunk(ctx context.Context, replication *api.Replication) error {
 }
 
 // local(real) file looks like: /workspace/models/Qwen--Qwen2-0.5B-Instruct-GGUF/blobs/8b08b8632419bd6d7369362945b5976c7f47b1c1--0001
-// target file locates at /workspace/models/Qwen--Qwen2-0.5B-Instruct-GGUF/snapshots/main/qwen2-0_5b-instruct-q5_k_m.gguf
+// target file looks like /workspace/models/Qwen--Qwen2-0.5B-Instruct-GGUF/snapshots/main/qwen2-0_5b-instruct-q5_k_m.gguf
 // the symlink of target file looks like ../../blobs/8b08b8632419bd6d7369362945b5976c7f47b1c1--0001
 func createSymlink(localPath, targetPath string) error {
+	// This could happen like force delete a Torrent but downloading is still on the way,
+	// then the blob file is deleted, in this situation, we should not create the symlink.
+	if _, err := os.Stat(localPath); err != nil {
+		return err
+	}
+
 	dir := filepath.Dir(targetPath)
 	err := os.MkdirAll(dir, 0755)
 	if err != nil {
@@ -180,4 +194,17 @@ func deleteSymlinkAndTarget(symlinkPath string) error {
 func parseURI(uri string) (host string, address string) {
 	splits := strings.Split(uri, "://")
 	return splits[0], splits[1]
+}
+
+func nodeIP(ctx context.Context, client client.Client, nodeName string) (string, error) {
+	node := corev1.Node{}
+	if err := client.Get(ctx, types.NamespacedName{Name: nodeName}, &node); err != nil {
+		return "", err
+	}
+	for _, address := range node.Status.Addresses {
+		if address.Type == "InternalIP" {
+			return address.Address, nil
+		}
+	}
+	return "", fmt.Errorf("can't get node internal IP")
 }

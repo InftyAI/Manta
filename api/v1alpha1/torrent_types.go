@@ -147,9 +147,9 @@ type RepoStatus struct {
 const (
 	// PendingConditionType represents the Torrent is Pending.
 	PendingConditionType = "Pending"
-	// DownloadConditionType represents the Torrent is under downloading.
-	DownloadConditionType = "Downloading"
-	// ReadyConditionType represents the Torrent is downloaded successfully.
+	// ReplicateConditionType represents the Torrent is under replicating, downloading or syncing.
+	ReplicateConditionType = "Replicating"
+	// ReadyConditionType represents the Torrent is replicated successfully.
 	ReadyConditionType = "Ready"
 	// ReclaimingConditionType represents the Torrent is removing chunks.
 	ReclaimingConditionType = "Reclaiming"

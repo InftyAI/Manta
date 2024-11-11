@@ -18,6 +18,7 @@ package controller
 
 import (
 	"context"
+	"time"
 
 	"github.com/onsi/ginkgo/v2"
 	"github.com/onsi/gomega"
@@ -96,10 +97,10 @@ var _ = ginkgo.Describe("Torrent controller test", func() {
 				},
 				{
 					updateFunc: func(torrent *api.Torrent) {
-						util.UpdateReplicationsCondition(ctx, k8sClient, torrent, api.DownloadConditionType)
+						util.UpdateReplicationsCondition(ctx, k8sClient, torrent, api.ReplicateConditionType)
 					},
 					checkFunc: func(ctx context.Context, k8sClient client.Client, torrent *api.Torrent) {
-						validation.ValidateTorrentStatusEqualTo(ctx, k8sClient, torrent, api.DownloadConditionType, "Downloading", metav1.ConditionTrue, nil)
+						validation.ValidateTorrentStatusEqualTo(ctx, k8sClient, torrent, api.ReplicateConditionType, "Replicating", metav1.ConditionTrue, nil)
 					},
 				},
 				{
@@ -134,10 +135,10 @@ var _ = ginkgo.Describe("Torrent controller test", func() {
 				},
 				{
 					updateFunc: func(torrent *api.Torrent) {
-						util.UpdateReplicationsCondition(ctx, k8sClient, torrent, api.DownloadConditionType)
+						util.UpdateReplicationsCondition(ctx, k8sClient, torrent, api.ReplicateConditionType)
 					},
 					checkFunc: func(ctx context.Context, k8sClient client.Client, torrent *api.Torrent) {
-						validation.ValidateTorrentStatusEqualTo(ctx, k8sClient, torrent, api.DownloadConditionType, "Downloading", metav1.ConditionTrue, nil)
+						validation.ValidateTorrentStatusEqualTo(ctx, k8sClient, torrent, api.ReplicateConditionType, "Replicating", metav1.ConditionTrue, nil)
 					},
 				},
 				{
@@ -172,10 +173,10 @@ var _ = ginkgo.Describe("Torrent controller test", func() {
 				},
 				{
 					updateFunc: func(torrent *api.Torrent) {
-						util.UpdateReplicationsCondition(ctx, k8sClient, torrent, api.DownloadConditionType)
+						util.UpdateReplicationsCondition(ctx, k8sClient, torrent, api.ReplicateConditionType)
 					},
 					checkFunc: func(ctx context.Context, k8sClient client.Client, torrent *api.Torrent) {
-						validation.ValidateTorrentStatusEqualTo(ctx, k8sClient, torrent, api.DownloadConditionType, "Downloading", metav1.ConditionTrue, nil)
+						validation.ValidateTorrentStatusEqualTo(ctx, k8sClient, torrent, api.ReplicateConditionType, "Replicating", metav1.ConditionTrue, nil)
 					},
 				},
 				{
@@ -217,10 +218,10 @@ var _ = ginkgo.Describe("Torrent controller test", func() {
 				},
 				{
 					updateFunc: func(torrent *api.Torrent) {
-						util.UpdateReplicationsCondition(ctx, k8sClient, torrent, api.DownloadConditionType)
+						util.UpdateReplicationsCondition(ctx, k8sClient, torrent, api.ReplicateConditionType)
 					},
 					checkFunc: func(ctx context.Context, k8sClient client.Client, torrent *api.Torrent) {
-						validation.ValidateTorrentStatusEqualTo(ctx, k8sClient, torrent, api.DownloadConditionType, "Downloading", metav1.ConditionTrue, nil)
+						validation.ValidateTorrentStatusEqualTo(ctx, k8sClient, torrent, api.ReplicateConditionType, "Replicating", metav1.ConditionTrue, nil)
 					},
 				},
 				{
@@ -260,10 +261,10 @@ var _ = ginkgo.Describe("Torrent controller test", func() {
 				},
 				{
 					updateFunc: func(torrent *api.Torrent) {
-						util.UpdateReplicationsCondition(ctx, k8sClient, torrent, api.DownloadConditionType)
+						util.UpdateReplicationsCondition(ctx, k8sClient, torrent, api.ReplicateConditionType)
 					},
 					checkFunc: func(ctx context.Context, k8sClient client.Client, torrent *api.Torrent) {
-						validation.ValidateTorrentStatusEqualTo(ctx, k8sClient, torrent, api.DownloadConditionType, "Downloading", metav1.ConditionTrue, nil)
+						validation.ValidateTorrentStatusEqualTo(ctx, k8sClient, torrent, api.ReplicateConditionType, "Replicating", metav1.ConditionTrue, nil)
 					},
 				},
 				{
@@ -304,10 +305,10 @@ var _ = ginkgo.Describe("Torrent controller test", func() {
 				},
 				{
 					updateFunc: func(torrent *api.Torrent) {
-						util.UpdateReplicationsCondition(ctx, k8sClient, torrent, api.DownloadConditionType)
+						util.UpdateReplicationsCondition(ctx, k8sClient, torrent, api.ReplicateConditionType)
 					},
 					checkFunc: func(ctx context.Context, k8sClient client.Client, torrent *api.Torrent) {
-						validation.ValidateTorrentStatusEqualTo(ctx, k8sClient, torrent, api.DownloadConditionType, "Downloading", metav1.ConditionTrue, nil)
+						validation.ValidateTorrentStatusEqualTo(ctx, k8sClient, torrent, api.ReplicateConditionType, "Replicating", metav1.ConditionTrue, nil)
 					},
 				},
 				{
@@ -349,10 +350,10 @@ var _ = ginkgo.Describe("Torrent controller test", func() {
 				},
 				{
 					updateFunc: func(torrent *api.Torrent) {
-						util.UpdateReplicationsCondition(ctx, k8sClient, torrent, api.DownloadConditionType)
+						util.UpdateReplicationsCondition(ctx, k8sClient, torrent, api.ReplicateConditionType)
 					},
 					checkFunc: func(ctx context.Context, k8sClient client.Client, torrent *api.Torrent) {
-						validation.ValidateTorrentStatusEqualTo(ctx, k8sClient, torrent, api.DownloadConditionType, "Downloading", metav1.ConditionTrue, nil)
+						validation.ValidateTorrentStatusEqualTo(ctx, k8sClient, torrent, api.ReplicateConditionType, "Replicating", metav1.ConditionTrue, nil)
 					},
 				},
 				{
@@ -390,10 +391,10 @@ var _ = ginkgo.Describe("Torrent controller test", func() {
 				},
 				{
 					updateFunc: func(torrent *api.Torrent) {
-						util.UpdateReplicationsCondition(ctx, k8sClient, torrent, api.DownloadConditionType)
+						util.UpdateReplicationsCondition(ctx, k8sClient, torrent, api.ReplicateConditionType)
 					},
 					checkFunc: func(ctx context.Context, k8sClient client.Client, torrent *api.Torrent) {
-						validation.ValidateTorrentStatusEqualTo(ctx, k8sClient, torrent, api.DownloadConditionType, "Downloading", metav1.ConditionTrue, nil)
+						validation.ValidateTorrentStatusEqualTo(ctx, k8sClient, torrent, api.ReplicateConditionType, "Replicating", metav1.ConditionTrue, nil)
 					},
 				},
 				{
@@ -446,10 +447,10 @@ var _ = ginkgo.Describe("Torrent controller test", func() {
 				},
 				{
 					updateFunc: func(torrent *api.Torrent) {
-						util.UpdateReplicationsCondition(ctx, k8sClient, torrent, api.DownloadConditionType)
+						util.UpdateReplicationsCondition(ctx, k8sClient, torrent, api.ReplicateConditionType)
 					},
 					checkFunc: func(ctx context.Context, k8sClient client.Client, torrent *api.Torrent) {
-						validation.ValidateTorrentStatusEqualTo(ctx, k8sClient, torrent, api.DownloadConditionType, "Downloading", metav1.ConditionTrue, nil)
+						validation.ValidateTorrentStatusEqualTo(ctx, k8sClient, torrent, api.ReplicateConditionType, "Replicating", metav1.ConditionTrue, nil)
 					},
 				},
 				{
@@ -471,6 +472,28 @@ var _ = ginkgo.Describe("Torrent controller test", func() {
 					checkFunc: func(ctx context.Context, k8sClient client.Client, torrent *api.Torrent) {
 						// Already replicated, will be set to ready directly.
 						validation.ValidateTorrentStatusEqualTo(ctx, k8sClient, torrent, api.ReadyConditionType, "Ready", metav1.ConditionTrue, nil)
+						validation.ValidateReplicationsNumberEqualTo(ctx, k8sClient, torrent, 0)
+					},
+				},
+			},
+		}),
+		ginkgo.Entry("Dispatch unavailable Torrent", &testValidatingCase{
+			precondition: func() error {
+				nodeTracker := wrapper.MakeNodeTracker("node1").Obj()
+				return k8sClient.Create(ctx, nodeTracker)
+			},
+			makeTorrent: func() *api.Torrent {
+				return wrapper.MakeTorrent("qwen2-7b-gguf").Hub("Huggingface", "Qwen/Qwen2-0.5B-Instruct-GGUF", "qwen2-0_5b-instruct-q5_k_m.gguf").NodeSelector("zone", "zone1").Obj()
+			},
+			updates: []*update{
+				{
+					updateFunc: func(torrent *api.Torrent) {
+						gomega.Expect(k8sClient.Create(ctx, torrent)).To(gomega.Succeed())
+					},
+					checkFunc: func(ctx context.Context, k8sClient client.Client, torrent *api.Torrent) {
+						// Wait for a moment to make sure it will not be ready.
+						time.Sleep(3 * time.Second)
+						validation.ValidateTorrentStatusEqualTo(ctx, k8sClient, torrent, api.PendingConditionType, "Pending", metav1.ConditionTrue, nil)
 						validation.ValidateReplicationsNumberEqualTo(ctx, k8sClient, torrent, 0)
 					},
 				},

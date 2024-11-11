@@ -36,7 +36,7 @@ func TestHandleReplication(t *testing.T) {
 		SourceOfHub("Huggingface", "Qwen/Qwen2.5-72B-Instruct", "main", "LICENSE").
 		DestinationOfURI("localhost://../../../tmp/replication/models/Qwen--Qwen2.5-72B-Instruct/blobs/LICENSE-chunk").
 		Obj()
-	if err := HandleReplication(ctx, toCreateReplication); err != nil {
+	if err := HandleReplication(ctx, nil, toCreateReplication); err != nil {
 		t.Errorf("failed to handle Replication: %v", err)
 	}
 
@@ -58,7 +58,7 @@ func TestHandleReplication(t *testing.T) {
 	toDeleteReplication := wrapper.MakeReplication("replication").
 		SourceOfURI("localhost://../../../tmp/replication/models/Qwen--Qwen2.5-72B-Instruct/snapshots/main/LICENSE").
 		Obj()
-	if err := HandleReplication(ctx, toDeleteReplication); err != nil {
+	if err := HandleReplication(ctx, nil, toDeleteReplication); err != nil {
 		t.Errorf("failed to handle Replication: %v", err)
 	}
 

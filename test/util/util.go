@@ -56,19 +56,19 @@ func UpdateReplicationsCondition(ctx context.Context, k8sClient client.Client, t
 		}
 
 		condition := metav1.Condition{}
-		if conditionType == api.DownloadConditionType {
+		if conditionType == api.ReplicateConditionType {
 			condition = metav1.Condition{
-				Type:    api.DownloadConditionType,
+				Type:    api.ReplicateConditionType,
 				Status:  metav1.ConditionTrue,
-				Reason:  "Downloading",
-				Message: "Downloading chunks",
+				Reason:  "Replicating",
+				Message: "Replicating chunks",
 			}
 		} else if conditionType == api.ReadyConditionType {
 			condition = metav1.Condition{
 				Type:    api.ReadyConditionType,
 				Status:  metav1.ConditionTrue,
 				Reason:  "Ready",
-				Message: "Download chunks successfully",
+				Message: "Chunks replicated successfully",
 			}
 		}
 

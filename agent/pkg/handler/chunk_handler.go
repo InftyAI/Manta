@@ -21,12 +21,13 @@ import (
 	"io"
 	"net/http"
 	"os"
+	"path/filepath"
 
 	"github.com/inftyai/manta/api"
 )
 
 const (
-	buffSize = 4 * 1024 * 1024 // 4MB buffer
+	buffSize = 10 * 1024 * 1024 // 10MB buffer
 )
 
 // SendChunk will send the chunk content via http request.
@@ -71,8 +72,8 @@ func SendChunk(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
-func recvChunk(blobPath, snapshotPath, peerName string) error {
-	url := fmt.Sprintf("http://%s:%s/sync?path=%s", peerName, api.HttpPort, blobPath)
+func recvChunk(blobPath, snapshotPath, ipAddr string) error {
+	url := fmt.Sprintf("http://%s:%s/sync?path=%s", ipAddr, api.HttpPort, blobPath)
 
 	resp, err := http.Get(url)
 	if err != nil {
@@ -81,6 +82,10 @@ func recvChunk(blobPath, snapshotPath, peerName string) error {
 	defer func() {
 		_ = resp.Body.Close()
 	}()
+
+	if err := os.MkdirAll(filepath.Dir(blobPath), os.ModePerm); err != nil {
+		return err
+	}
 
 	// Use the same path for different peers.
 	file, err := os.Create(blobPath)

@@ -62,6 +62,16 @@ func (r *ReplicationReconciler) Reconcile(ctx context.Context, req ctrl.Request)
 		return ctrl.Result{}, client.IgnoreNotFound(err)
 	}
 
+	// torrentName shouldn't be empty here, but let's ignore this case, it will not
+	// harm the happy path.
+	if torrentName, ok := replication.Labels[api.TorrentNameLabelKey]; ok {
+		torrent := api.Torrent{}
+		if err := r.Get(ctx, types.NamespacedName{Name: torrentName}, &torrent); err != nil {
+			// Once torrent not found, ignore the replication then.
+			return ctrl.Result{}, client.IgnoreNotFound(err)
+		}
+	}
+
 	// Filter out unrelated events.
 	if replication.Spec.NodeName != NODE_NAME ||
 		replicationReady(replication) ||
@@ -73,7 +83,7 @@ func (r *ReplicationReconciler) Reconcile(ctx context.Context, req ctrl.Request)
 
 	logger.Info("Reconcile replication", "Replication", klog.KObj(replication))
 
-	conditionType := api.DownloadConditionType
+	conditionType := api.ReplicateConditionType
 	if replication.Spec.Destination == nil {
 		conditionType = api.ReclaimingConditionType
 	}
@@ -82,7 +92,7 @@ func (r *ReplicationReconciler) Reconcile(ctx context.Context, req ctrl.Request)
 	}
 
 	// This may take a long time, the concurrency is controlled by the MaxConcurrentReconciles.
-	if err := handler.HandleReplication(ctx, replication); err != nil {
+	if err := handler.HandleReplication(ctx, r.Client, replication); err != nil {
 		logger.Error(err, "error to handle replication", "Replication", klog.KObj(replication))
 		return ctrl.Result{}, err
 	} else {
@@ -136,19 +146,19 @@ func (r *ReplicationReconciler) updateNodeTracker(ctx context.Context, replicati
 func (r *ReplicationReconciler) SetupWithManager(mgr ctrl.Manager) error {
 	return ctrl.NewControllerManagedBy(mgr).
 		For(&api.Replication{}).
-		WithOptions(controller.Options{MaxConcurrentReconciles: 10}).
+		WithOptions(controller.Options{MaxConcurrentReconciles: 5}).
 		Complete(r)
 }
 
 func setReplicationCondition(replication *api.Replication, conditionType string) (changed bool) {
-	if conditionType == api.DownloadConditionType {
+	if conditionType == api.ReplicateConditionType {
 		condition := metav1.Condition{
 			Type:    conditionType,
 			Status:  metav1.ConditionTrue,
-			Reason:  "Downloading",
-			Message: "Downloading chunks",
+			Reason:  "Replicating",
+			Message: "Replicating chunks",
 		}
-		replication.Status.Phase = ptr.To[string](api.DownloadConditionType)
+		replication.Status.Phase = ptr.To[string](api.ReplicateConditionType)
 		return apimeta.SetStatusCondition(&replication.Status.Conditions, condition)
 	}
 
@@ -157,7 +167,7 @@ func setReplicationCondition(replication *api.Replication, conditionType string)
 			Type:    conditionType,
 			Status:  metav1.ConditionTrue,
 			Reason:  "Ready",
-			Message: "Download chunks successfully",
+			Message: "Chunks replicated successfully",
 		}
 		replication.Status.Phase = ptr.To[string](api.ReadyConditionType)
 		return apimeta.SetStatusCondition(&replication.Status.Conditions, condition)

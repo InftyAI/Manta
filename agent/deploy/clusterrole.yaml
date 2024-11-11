@@ -6,6 +6,14 @@ rules:
 - apiGroups:
   - "manta.io"
   resources:
+  - torrents
+  verbs:
+  - get
+  - list
+  - watch
+- apiGroups:
+  - "manta.io"
+  resources:
   - replications
   verbs:
   - get

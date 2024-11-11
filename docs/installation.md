@@ -9,14 +9,14 @@
 ### Install
 
 ```cmd
-VERSION=v0.0.1
+VERSION=v0.0.2
 kubectl apply --server-side -f https://github.com/inftyai/manta/releases/download/$VERSION/manifests.yaml
 ```
 
 ### Uninstall
 
 ```cmd
-VERSION=v0.0.1
+VERSION=v0.0.2
 kubectl delete -f https://github.com/inftyai/manta/releases/download/$VERSION/manifests.yaml
 ```
 
