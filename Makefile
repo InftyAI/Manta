@@ -119,8 +119,8 @@ test-integration: manifests fmt vet envtest ginkgo ## Run integration tests.
 	$(GINKGO) --junit-report=junit.xml --output-dir=$(ARTIFACTS) -v $(INTEGRATION_TARGET)
 
 .PHONY: test-e2e
-test-e2e: kustomize manifests fmt vet envtest ginkgo kind-image-build
-	E2E_KIND_VERSION=$(E2E_KIND_VERSION) KIND_CLUSTER_NAME=$(KIND_CLUSTER_NAME) KIND=$(KIND) KUBECTL=$(KUBECTL) KUSTOMIZE=$(KUSTOMIZE) GINKGO=$(GINKGO) USE_EXISTING_CLUSTER=$(USE_EXISTING_CLUSTER) IMAGE_TAG=$(IMG) ./hack/e2e-test.sh
+test-e2e: kustomize manifests fmt vet envtest ginkgo kind-image-build kind-agent-image-build
+	E2E_KIND_VERSION=$(E2E_KIND_VERSION) KIND_CLUSTER_NAME=$(KIND_CLUSTER_NAME) KIND=$(KIND) KUBECTL=$(KUBECTL) KUSTOMIZE=$(KUSTOMIZE) GINKGO=$(GINKGO) USE_EXISTING_CLUSTER=$(USE_EXISTING_CLUSTER) IMAGE_TAG=$(IMG) AGENT_IMAGE_TAG=$(AGENT_IMG) ./hack/e2e-test.sh
 
 GOLANGCI_LINT = $(shell pwd)/bin/golangci-lint
 GOLANGCI_LINT_VERSION ?= v1.58.2
@@ -200,6 +200,11 @@ kind-image-build: PLATFORMS=linux/amd64
 kind-image-build: IMAGE_BUILD_EXTRA_OPTS=--load
 kind-image-build: kind image-build
 
+.PHONY: kind-agent-image-build
+kind-agent-image-build: PLATFORMS=linux/amd64
+kind-agent-image-build: IMAGE_BUILD_EXTRA_OPTS=--load
+kind-agent-image-build: kind agent-image-build
+
 ##@ Deployment
 
 ifndef ignore-not-found
@@ -275,10 +280,12 @@ artifacts: kustomize
 	if [ -d artifacts ]; then rm -rf artifacts; fi
 	mkdir -p artifacts
 	$(KUSTOMIZE) build config/default -o artifacts/manifests.yaml
-	@$(call clean-manifests)
 
-	# Merge all the yamls, inclduing the agent.
-	./hack/merge-yaml.sh
+	echo "---" >> artifacts/manifests.yaml
+
+	cd agent/config/manager && $(KUSTOMIZE) edit set image controller=${AGENT_IMG}
+	$(KUSTOMIZE) build agent/config >> artifacts/manifests.yaml
+	@$(call clean-manifests)
 
 HELMIFY ?= $(LOCALBIN)/helmify
 
