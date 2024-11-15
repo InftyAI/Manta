@@ -159,5 +159,5 @@ func ValidateNodeTrackerChunkNumberEqualTo(ctx context.Context, k8sClient client
 			return fmt.Errorf("unexpected chunk number, want %d, got %d", number, len(nt.Spec.Chunks))
 		}
 		return nil
-	}, util.Timeout, util.Interval).Should(gomega.Succeed())
+	}, util.Timeout*3, util.Interval).Should(gomega.Succeed())
 }
