@@ -34,10 +34,17 @@ function startup {
 }
 function kind_load {
     $KIND load docker-image $IMAGE_TAG --name $KIND_CLUSTER_NAME
+    $KIND load docker-image $AGENT_IMAGE_TAG --name $KIND_CLUSTER_NAME
 }
 function deploy {
+    # controller
     cd $CWD/config/manager && $KUSTOMIZE edit set image controller=$IMAGE_TAG
     $KUSTOMIZE build $CWD/test/e2e/config | $KUBECTL apply --server-side -f -
+
+    # agent
+	cd $CWD/agent/config/manager && $KUSTOMIZE edit set image controller=$AGENT_IMAGE_TAG
+    $KUSTOMIZE build $CWD/agent/config | $KUBECTL apply --server-side -f -
+
 }
 trap cleanup EXIT
 startup

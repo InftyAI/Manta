@@ -101,8 +101,6 @@ func readyForTesting(client client.Client) {
 	}).ShouldNot(Succeed())
 
 	By("waiting for nodeTrackers to ready")
-	// Hardcoded the namespace here because we just can't change the namespace dynamically.
-	Expect(util.Apply(ctx, k8sClient, "../../agent/deploy", "manta-system", "create")).To(Succeed())
 	Eventually(func() error {
 		nodeTrackers := &api.NodeTrackerList{}
 		if err := client.List(ctx, nodeTrackers); err != nil {

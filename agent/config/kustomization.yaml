@@ -1,0 +1,8 @@
+# Adds namespace to all resources.
+namespace: manta-system
+
+resources:
+- ./manager
+- ./base/serviceaccount.yaml
+- ./base/clusterrole.yaml
+- ./base/clusterrole-binding.yaml

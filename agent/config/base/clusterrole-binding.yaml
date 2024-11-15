@@ -5,7 +5,7 @@ metadata:
 subjects:
 - kind: ServiceAccount
   name: manta-agent
-  namespace: manta-system
+  namespace: system
 roleRef:
   kind: ClusterRole
   name: manta-agent-role
