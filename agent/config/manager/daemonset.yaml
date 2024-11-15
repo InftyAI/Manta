@@ -4,6 +4,7 @@ metadata:
   name: manta-agent
   namespace: manta-system
   labels:
+    # This is required for manta when fetching peer IP.
     app: manta-agent
 spec:
   selector:
@@ -14,7 +15,6 @@ spec:
       labels:
         app: manta-agent
     spec:
-      hostNetwork: true
       serviceAccountName: manta-agent
       initContainers:
       - name: init-permissions

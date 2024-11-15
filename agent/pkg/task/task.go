@@ -23,7 +23,6 @@ import (
 	"path/filepath"
 	"time"
 
-	"github.com/go-logr/logr"
 	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -43,25 +42,20 @@ const (
 	workspace = cons.DefaultWorkspace
 )
 
-var (
-	logger logr.Logger
-)
-
 func BackgroundTasks(ctx context.Context, c client.Client) {
-	ctrl.SetLogger(zap.New(zap.UseDevMode(true)))
-	logger = ctrl.Log.WithName("Background")
-
 	// Sync the disk chunk infos to the nodeTracker.
 	go syncChunks(ctx, c)
 }
 
 func syncChunks(ctx context.Context, c client.Client) {
+	ctrl.SetLogger(zap.New(zap.UseDevMode(true)))
+	logger := ctrl.Log.WithName("Background tasks")
+
 	forFunc := func(ctx context.Context) error {
 		attempts := 0
 		for {
 			attempts += 1
 			if err := findOrCreateNodeTracker(ctx, c); err != nil {
-				// fmt.Printf("failed to create nodeTracker: %v, retry.", err)
 				logger.Error(err, "Failed to create nodeTracker, retry...")
 
 				if attempts > 10 {

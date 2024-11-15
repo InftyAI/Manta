@@ -24,7 +24,8 @@ import (
 	"strings"
 
 	corev1 "k8s.io/api/core/v1"
-	"k8s.io/apimachinery/pkg/types"
+	"k8s.io/apimachinery/pkg/fields"
+	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/klog/v2"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/log"
@@ -104,7 +105,7 @@ func syncChunk(ctx context.Context, client client.Client, replication *api.Repli
 	sourceSplits := strings.Split(*replication.Spec.Source.URI, "://")
 	addresses := strings.Split(sourceSplits[1], "@")
 	nodeName, blobPath := addresses[0], addresses[1]
-	nodeIP, err := nodeIP(ctx, client, nodeName)
+	addr, err := peerAddr(ctx, client, nodeName)
 	if err != nil {
 		return err
 	}
@@ -112,7 +113,7 @@ func syncChunk(ctx context.Context, client client.Client, replication *api.Repli
 	// The destination URI looks like localhost://<path-to-your-file>
 	destSplits := strings.Split(*replication.Spec.Destination.URI, "://")
 
-	if err := recvChunk(blobPath, destSplits[1], nodeIP); err != nil {
+	if err := recvChunk(blobPath, destSplits[1], addr); err != nil {
 		logger.Error(err, "failed to sync chunk")
 		return err
 	}
@@ -196,15 +197,22 @@ func parseURI(uri string) (host string, address string) {
 	return splits[0], splits[1]
 }
 
-func nodeIP(ctx context.Context, client client.Client, nodeName string) (string, error) {
-	node := corev1.Node{}
-	if err := client.Get(ctx, types.NamespacedName{Name: nodeName}, &node); err != nil {
+func peerAddr(ctx context.Context, c client.Client, nodeName string) (string, error) {
+	fieldSelector := fields.OneTermEqualSelector("spec.nodeName", nodeName)
+	listOptions := &client.ListOptions{
+		FieldSelector: fieldSelector,
+		// HACK: the label is hacked, we must set it explicitly in the daemonSet.
+		LabelSelector: labels.SelectorFromSet(map[string]string{"app": "manta-agent"}),
+	}
+
+	pods := corev1.PodList{}
+	if err := c.List(ctx, &pods, listOptions); err != nil {
 		return "", err
 	}
-	for _, address := range node.Status.Addresses {
-		if address.Type == "InternalIP" {
-			return address.Address, nil
-		}
+
+	if len(pods.Items) != 1 {
+		return "", fmt.Errorf("got more than one pod per node for daemonSet")
 	}
-	return "", fmt.Errorf("can't get node internal IP")
+
+	return pods.Items[0].Status.PodIP, nil
 }

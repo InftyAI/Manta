@@ -42,7 +42,6 @@ import (
 	"github.com/inftyai/manta/pkg/dispatcher"
 	"github.com/inftyai/manta/pkg/dispatcher/framework"
 	"github.com/inftyai/manta/pkg/dispatcher/plugins/diskaware"
-	"github.com/inftyai/manta/pkg/dispatcher/plugins/gnumber"
 	"github.com/inftyai/manta/pkg/dispatcher/plugins/nodeselector"
 )
 
@@ -106,7 +105,7 @@ var _ = BeforeSuite(func() {
 	})
 	Expect(err).ToNot(HaveOccurred())
 
-	dispatcher, err := dispatcher.NewDispatcher([]framework.RegisterFunc{nodeselector.New, diskaware.New, gnumber.New})
+	dispatcher, err := dispatcher.NewDispatcher([]framework.RegisterFunc{nodeselector.New, diskaware.New})
 	Expect(err).ToNot(HaveOccurred())
 
 	torrentController := controller.NewTorrentReconciler(mgr.GetClient(), mgr.GetScheme(), dispatcher)
