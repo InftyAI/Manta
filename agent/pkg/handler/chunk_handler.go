@@ -72,8 +72,8 @@ func SendChunk(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
-func recvChunk(blobPath, snapshotPath, ipAddr string) error {
-	url := fmt.Sprintf("http://%s:%s/sync?path=%s", ipAddr, api.HttpPort, blobPath)
+func recvChunk(blobPath, snapshotPath, addr string) error {
+	url := fmt.Sprintf("http://%s:%s/sync?path=%s", addr, api.HttpPort, blobPath)
 
 	resp, err := http.Get(url)
 	if err != nil {

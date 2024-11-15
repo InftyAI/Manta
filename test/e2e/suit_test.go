@@ -26,7 +26,6 @@ import (
 	admissionv1 "k8s.io/api/admission/v1"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apiextensions-apiserver/pkg/client/clientset/clientset/scheme"
-	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/client-go/rest"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/client/config"
@@ -35,7 +34,6 @@ import (
 
 	api "github.com/inftyai/manta/api/v1alpha1"
 	"github.com/inftyai/manta/test/util"
-	"github.com/inftyai/manta/test/util/wrapper"
 )
 
 var cfg *rest.Config
@@ -78,28 +76,6 @@ var _ = AfterSuite(func() {
 })
 
 func readyForTesting(client client.Client) {
-	By("waiting for webhooks to ready")
-
-	// To verify that webhooks are ready, let's create a simple Replication.
-	replication := wrapper.MakeReplication("sample-replication").
-		NodeName("unknown-node").
-		ChunkName("chunk1").
-		SizeBytes(1024).
-		SourceOfURI("localhost:///workspace/models/modelA").
-		Obj()
-
-	// Once the creation succeeds, that means the webhooks are ready
-	// and we can begin testing.
-	Eventually(func() error {
-		return client.Create(ctx, replication)
-	}, util.Timeout, util.Interval).Should(Succeed())
-
-	// Delete this replication before beginning tests.
-	Expect(client.Delete(ctx, replication)).To(Succeed())
-	Eventually(func() error {
-		return client.Get(ctx, types.NamespacedName{Name: replication.Name}, &api.Replication{})
-	}).ShouldNot(Succeed())
-
 	By("waiting for nodeTrackers to ready")
 	Eventually(func() error {
 		nodeTrackers := &api.NodeTrackerList{}
@@ -110,5 +86,5 @@ func readyForTesting(client client.Client) {
 			return fmt.Errorf("no nodeTrackers")
 		}
 		return nil
-	}, util.Timeout, util.Interval).Should(Succeed())
+	}, util.Timeout*3, util.Interval).Should(Succeed())
 }

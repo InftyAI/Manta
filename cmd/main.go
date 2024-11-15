@@ -39,7 +39,6 @@ import (
 	"github.com/inftyai/manta/pkg/dispatcher"
 	"github.com/inftyai/manta/pkg/dispatcher/framework"
 	"github.com/inftyai/manta/pkg/dispatcher/plugins/diskaware"
-	"github.com/inftyai/manta/pkg/dispatcher/plugins/gnumber"
 	"github.com/inftyai/manta/pkg/dispatcher/plugins/nodeselector"
 	"github.com/inftyai/manta/pkg/webhook"
 	//+kubebuilder:scaffold:imports
@@ -133,7 +132,7 @@ func setupControllers(mgr ctrl.Manager, certsReady chan struct{}) {
 	<-certsReady
 	setupLog.Info("certs ready")
 
-	dispatcher, err := dispatcher.NewDispatcher([]framework.RegisterFunc{nodeselector.New, diskaware.New, gnumber.New})
+	dispatcher, err := dispatcher.NewDispatcher([]framework.RegisterFunc{nodeselector.New, diskaware.New})
 	if err != nil {
 		setupLog.Error(err, "unable to create dispatcher")
 		os.Exit(1)

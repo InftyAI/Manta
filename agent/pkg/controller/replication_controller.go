@@ -20,6 +20,7 @@ import (
 	"context"
 	"os"
 
+	corev1 "k8s.io/api/core/v1"
 	apimeta "k8s.io/apimachinery/pkg/api/meta"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
@@ -92,6 +93,7 @@ func (r *ReplicationReconciler) Reconcile(ctx context.Context, req ctrl.Request)
 	}
 
 	// This may take a long time, the concurrency is controlled by the MaxConcurrentReconciles.
+	// TODO: should we create a Job to handle this? See discussion: https://github.com/InftyAI/Manta/issues/25
 	if err := handler.HandleReplication(ctx, r.Client, replication); err != nil {
 		logger.Error(err, "error to handle replication", "Replication", klog.KObj(replication))
 		return ctrl.Result{}, err
@@ -144,6 +146,13 @@ func (r *ReplicationReconciler) updateNodeTracker(ctx context.Context, replicati
 
 // SetupWithManager sets up the controller with the Manager.
 func (r *ReplicationReconciler) SetupWithManager(mgr ctrl.Manager) error {
+	if err := mgr.GetFieldIndexer().IndexField(context.TODO(), &corev1.Pod{}, "spec.nodeName", func(rawObj client.Object) []string {
+		pod := rawObj.(*corev1.Pod)
+		return []string{pod.Spec.NodeName}
+	}); err != nil {
+		return err
+	}
+
 	return ctrl.NewControllerManagedBy(mgr).
 		For(&api.Replication{}).
 		WithOptions(controller.Options{MaxConcurrentReconciles: 5}).

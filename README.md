@@ -50,6 +50,7 @@ metadata:
   name: torrent-sample
 spec:
   hub:
+    name: Huggingface
     repoID: Qwen/Qwen2.5-0.5B-Instruct
 ```
 
@@ -62,6 +63,7 @@ metadata:
   name: torrent-sample
 spec:
   hub:
+    name: Huggingface
     repoID: Qwen/Qwen2.5-0.5B-Instruct
   nodeSelector:
     zone: zone-a
@@ -78,6 +80,7 @@ metadata:
   name: torrent-sample
 spec:
   hub:
+    name: Huggingface
     repoID: Qwen/Qwen2.5-0.5B-Instruct
   reclaimPolicy: Delete
 ```
