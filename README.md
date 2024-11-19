@@ -27,11 +27,19 @@ _Name Story: the inspiration of the name `Manta` is coming from Dota2, called [M
 
 ## Features Overview
 
-- **Model Preheat**: Models could be preloaded to clusters, to specified nodes to accelerate the model serving.
-- **Model Cache**: Models will be cached after downloading for faster model loading.
-- **Model Lifecycle Management**: Manage the model lifecycle automatically with different policies, like `Retain` or `Delete`.
+- **Model Hub Support**: Models could be downloaded directly from model hubs (Huggingface etc.) or object storages, no other efforts.
+- **Model Preheat**: Models could be preloaded to clusters, or specified nodes to accelerate the model serving.
+- **Model Cache**: Models will be cached as chunks after downloading for faster model loading.
+- **Model Lifecycle Management**: Model lifecycle is managed automatically with different strategies, like `Retain` or `Delete`.
 - **Plugin Framework**: _Filter_ and _Score_ plugins could be extended to pick up the best candidates.
 - **Memory Management(WIP)**: Manage the reserved memories for caching, together with LRU algorithm for GC.
+
+## You Should Know Before
+
+- Manta is not an all-in-one solution for model management, instead, it offers a lightweight solution to utilize the idle bandwidth and cost-effective disk, helping you save money.
+- It requires no additional components like databases or storage systems, simplifying setup and reducing effort.
+- All the models will be stored under the host path of `/mnt/models/`
+- After all, it's just a **cache system**.
 
 ## Quick Start
 
@@ -86,6 +94,12 @@ spec:
 ```
 
 More details refer to the [APIs](https://github.com/InftyAI/Manta/blob/main/api/v1alpha1/torrent_types.go).
+
+## Roadmap
+
+- Preloading datasets from model hubs
+- RDMA support for faster model loading
+- More integrations with serving projects
 
 ## Community
 
