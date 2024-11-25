@@ -18,6 +18,7 @@ package webhook
 
 import (
 	"context"
+	"time"
 
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/util/validation/field"
@@ -60,7 +61,15 @@ func (w *TorrentWebhook) ValidateCreate(ctx context.Context, obj runtime.Object)
 
 // ValidateUpdate implements webhook.Validator so a webhook will be registered for the type
 func (w *TorrentWebhook) ValidateUpdate(ctx context.Context, oldObj, newObj runtime.Object) (admission.Warnings, error) {
-	allErrs := w.generateValidate(newObj)
+	old := oldObj.(*api.Torrent)
+	new := newObj.(*api.Torrent)
+
+	var allErrs field.ErrorList
+	specPath := field.NewPath("spec")
+	if *old.Spec.Preheat && !*new.Spec.Preheat {
+		allErrs = append(allErrs, field.Forbidden(specPath.Child("preheat"), "preheat can only be transitioned from false to true"))
+	}
+	allErrs = append(allErrs, w.generateValidate(newObj)...)
 	return nil, allErrs.ToAggregate()
 }
 
@@ -76,6 +85,10 @@ func (w *TorrentWebhook) generateValidate(obj runtime.Object) field.ErrorList {
 	var allErrs field.ErrorList
 	if torrent.Spec.Hub == nil {
 		allErrs = append(allErrs, field.Forbidden(specPath.Child("hub"), "hub can't be null"))
+	}
+
+	if !(torrent.Spec.TTLSecondsAfterReady == nil || *torrent.Spec.TTLSecondsAfterReady == time.Duration(0)) {
+		allErrs = append(allErrs, field.Forbidden(specPath.Child("ttlSecondsAfterReady"), "only support nil and 0 right now"))
 	}
 
 	return allErrs

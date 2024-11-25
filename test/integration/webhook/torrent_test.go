@@ -19,6 +19,8 @@ package webhook
 import (
 	"github.com/onsi/ginkgo/v2"
 	"github.com/onsi/gomega"
+	"k8s.io/apimachinery/pkg/types"
+	"k8s.io/utils/ptr"
 
 	api "github.com/inftyai/manta/api/v1alpha1"
 	"github.com/inftyai/manta/test/util/wrapper"
@@ -37,34 +39,85 @@ var _ = ginkgo.Describe("Torrent default and validation", func() {
 	})
 
 	type testValidatingCase struct {
-		torrent func() *api.Torrent
-		failed  bool
+		creationFunc func() *api.Torrent
+		createFailed bool
+		updateFunc   func(*api.Torrent) *api.Torrent
+		updateFiled  bool
 	}
 	ginkgo.DescribeTable("test validating",
 		func(tc *testValidatingCase) {
-			if tc.failed {
-				gomega.Expect(k8sClient.Create(ctx, tc.torrent())).Should(gomega.HaveOccurred())
+			torrent := tc.creationFunc()
+			err := k8sClient.Create(ctx, torrent)
+
+			if tc.createFailed {
+				gomega.Expect(err).To(gomega.HaveOccurred())
+				return
 			} else {
-				gomega.Expect(k8sClient.Create(ctx, tc.torrent())).To(gomega.Succeed())
+				gomega.Expect(err).To(gomega.Succeed())
+			}
+
+			gomega.Expect(k8sClient.Get(ctx, types.NamespacedName{Name: torrent.Name, Namespace: torrent.Namespace}, torrent)).Should(gomega.Succeed())
+
+			if tc.updateFunc != nil {
+				err = k8sClient.Update(ctx, tc.updateFunc(torrent))
+				if tc.updateFiled {
+					gomega.Expect(err).To(gomega.HaveOccurred())
+				} else {
+					gomega.Expect(err).To(gomega.Succeed())
+				}
 			}
 		},
 		ginkgo.Entry("torrent hub set", &testValidatingCase{
-			torrent: func() *api.Torrent {
+			creationFunc: func() *api.Torrent {
 				return wrapper.MakeTorrent("download-qwen").Hub("Huggingface", "Qwen/Qwen2-7B-Instruct", "").Obj()
 			},
-			failed: false,
+			createFailed: false,
 		}),
 		ginkgo.Entry("torrent hub not set", &testValidatingCase{
-			torrent: func() *api.Torrent {
+			creationFunc: func() *api.Torrent {
 				return wrapper.MakeTorrent("download-qwen").Obj()
 			},
-			failed: true,
+			createFailed: true,
 		}),
 		ginkgo.Entry("unknown hub not supported", &testValidatingCase{
-			torrent: func() *api.Torrent {
+			creationFunc: func() *api.Torrent {
 				return wrapper.MakeTorrent("download-qwen").Hub("ModelScope", "Qwen/Qwen2-7B-Instruct", "").Obj()
 			},
-			failed: true,
+			createFailed: true,
+		}),
+		ginkgo.Entry("preheat from false to true should be succeeded", &testValidatingCase{
+			creationFunc: func() *api.Torrent {
+				return wrapper.MakeTorrent("download-qwen").Hub("Huggingface", "Qwen/Qwen2-7B-Instruct", "").Obj()
+			},
+			createFailed: false,
+			updateFunc: func(torrent *api.Torrent) *api.Torrent {
+				torrent.Spec.Preheat = ptr.To[bool](true)
+				return torrent
+			},
+			updateFiled: false,
+		}),
+		ginkgo.Entry("preheat from true to false should be failed", &testValidatingCase{
+			creationFunc: func() *api.Torrent {
+				return wrapper.MakeTorrent("download-qwen").Preheat(true).Hub("Huggingface", "Qwen/Qwen2-7B-Instruct", "").Obj()
+			},
+			createFailed: false,
+			updateFunc: func(torrent *api.Torrent) *api.Torrent {
+				torrent.Spec.Preheat = ptr.To[bool](false)
+				return torrent
+			},
+			updateFiled: true,
+		}),
+		ginkgo.Entry("ttlSecondsAfterReady is 0", &testValidatingCase{
+			creationFunc: func() *api.Torrent {
+				return wrapper.MakeTorrent("download-qwen").Preheat(true).TTL(0).Hub("Huggingface", "Qwen/Qwen2-7B-Instruct", "").Obj()
+			},
+			createFailed: false,
+		}),
+		ginkgo.Entry("ttlSecondsAfterReady not nil or 0", &testValidatingCase{
+			creationFunc: func() *api.Torrent {
+				return wrapper.MakeTorrent("download-qwen").Preheat(true).TTL(1).Hub("Huggingface", "Qwen/Qwen2-7B-Instruct", "").Obj()
+			},
+			createFailed: true,
 		}),
 	)
 })

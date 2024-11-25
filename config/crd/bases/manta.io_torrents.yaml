@@ -84,6 +84,12 @@ spec:
                   NodeSelector represents the node constraints to download the chunks.
                   It can be used to download the model to a specified node for preheating.
                 type: object
+              preheat:
+                default: true
+                description: |-
+                  Preheat represents whether we should preload the model.
+                  Preheat can only be transitioned from false to true, not the other way around.
+                type: boolean
               reclaimPolicy:
                 default: Retain
                 description: |-
@@ -98,6 +104,12 @@ spec:
                 default: 1
                 description: Replicas represents the replication number of each object.
                 format: int32
+                type: integer
+              ttlSecondsAfterReady:
+                description: |-
+                  TTLSecondsAfterReady represents the waiting time to delete the Torrent once Ready.
+                  Default to nil indicates Torrent will not be deleted.
+                format: int64
                 type: integer
             type: object
           status:
