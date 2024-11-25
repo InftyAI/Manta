@@ -51,6 +51,7 @@ var _ = ginkgo.Describe("torrent e2e test", func() {
 		defer func() {
 			gomega.Expect(k8sClient.Delete(ctx, torrent)).To(gomega.Succeed())
 			validation.ValidateTorrentNotExist(ctx, k8sClient, torrent)
+			validation.ValidateNodeTrackerChunkNumberEqualTo(ctx, k8sClient, 0, "kind-worker", "kind-worker2", "kind-worker3")
 		}()
 
 		validation.ValidateTorrentStatusEqualTo(ctx, k8sClient, torrent, api.ReadyConditionType, "Ready", metav1.ConditionTrue, &validation.ValidateOptions{Timeout: 5 * time.Minute})
@@ -63,14 +64,14 @@ var _ = ginkgo.Describe("torrent e2e test", func() {
 		defer func() {
 			gomega.Expect(k8sClient.Delete(ctx, torrent)).To(gomega.Succeed())
 			validation.ValidateTorrentNotExist(ctx, k8sClient, torrent)
-			validation.ValidateNodeTrackerChunkNumberEqualTo(ctx, k8sClient, "kind-worker2", 0)
+			validation.ValidateNodeTrackerChunkNumberEqualTo(ctx, k8sClient, 0, "kind-worker", "kind-worker2", "kind-worker3")
 		}()
 
 		validation.ValidateTorrentStatusEqualTo(ctx, k8sClient, torrent, api.ReadyConditionType, "Ready", metav1.ConditionTrue, &validation.ValidateOptions{Timeout: 5 * time.Minute})
 		validation.ValidateAllReplicationsNodeNameEqualTo(ctx, k8sClient, torrent, "kind-worker2")
 		validation.ValidateReplicationsNumberEqualTo(ctx, k8sClient, torrent, 0)
 		// From https://huggingface.co/facebook/opt-125m/tree/main, opt-125m has 12 files.
-		validation.ValidateNodeTrackerChunkNumberEqualTo(ctx, k8sClient, "kind-worker2", 12)
+		validation.ValidateNodeTrackerChunkNumberEqualTo(ctx, k8sClient, 12, "kind-worker2")
 	})
 
 	ginkgo.It("Sync the models successfully", func() {
@@ -79,9 +80,7 @@ var _ = ginkgo.Describe("torrent e2e test", func() {
 		defer func() {
 			gomega.Expect(k8sClient.Delete(ctx, torrent)).To(gomega.Succeed())
 			validation.ValidateTorrentNotExist(ctx, k8sClient, torrent)
-			validation.ValidateNodeTrackerChunkNumberEqualTo(ctx, k8sClient, "kind-worker", 0)
-			validation.ValidateNodeTrackerChunkNumberEqualTo(ctx, k8sClient, "kind-worker2", 0)
-			validation.ValidateNodeTrackerChunkNumberEqualTo(ctx, k8sClient, "kind-worker3", 0)
+			validation.ValidateNodeTrackerChunkNumberEqualTo(ctx, k8sClient, 0, "kind-worker", "kind-worker2", "kind-worker3")
 		}()
 
 		validation.ValidateTorrentStatusEqualTo(ctx, k8sClient, torrent, api.ReadyConditionType, "Ready", metav1.ConditionTrue, &validation.ValidateOptions{Timeout: 5 * time.Minute})
@@ -97,8 +96,15 @@ var _ = ginkgo.Describe("torrent e2e test", func() {
 
 		// We have three nodes.
 		// From https://huggingface.co/facebook/opt-125m/tree/main, opt-125m has 12 files.
-		validation.ValidateNodeTrackerChunkNumberEqualTo(ctx, k8sClient, "kind-worker", 12)
-		validation.ValidateNodeTrackerChunkNumberEqualTo(ctx, k8sClient, "kind-worker2", 12)
-		validation.ValidateNodeTrackerChunkNumberEqualTo(ctx, k8sClient, "kind-worker3", 12)
+		validation.ValidateNodeTrackerChunkNumberEqualTo(ctx, k8sClient, 12, "kind-worker", "kind-worker2", "kind-worker3")
+	})
+
+	ginkgo.It("Torrent will be auto GCed with TTLSecondsAfterReady", func() {
+		torrent := wrapper.MakeTorrent("facebook-opt-125m").TTL(0).Hub("Huggingface", "facebook/opt-125m", "").ReclaimPolicy(api.DeleteReclaimPolicy).Obj()
+		gomega.Expect(k8sClient.Create(ctx, torrent)).To(gomega.Succeed())
+
+		validation.ValidateTorrentNotExist(ctx, k8sClient, torrent)
+		validation.ValidateReplicationsNumberEqualTo(ctx, k8sClient, torrent, 0)
+		validation.ValidateNodeTrackerChunkNumberEqualTo(ctx, k8sClient, 0, "kind-worker", "kind-worker2", "kind-worker3")
 	})
 })

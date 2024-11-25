@@ -88,9 +88,11 @@ spec:
                   uri:
                     description: "URI represents the file address with different storages,
                       e.g.:\n\t - oss://<bucket>.<endpoint>/<path-to-your-file>\n\t
-                      - localhost://<path-to-your-file>\n\t - remote://<node-name>@<path-to-your-file>\nNote:
-                      if it's a folder, all the files under the folder will be considered,\notherwise,
-                      only one file will be replicated."
+                      - localhost://<path-to-your-file>\n\t - remote://<node-name>@<path-to-your-file>\nLocalhost
+                      means the local host path, remote means the host path of the
+                      provided node.\nNote: if it's a folder, all the files under
+                      the folder will be considered,\notherwise, only one file will
+                      be replicated."
                     type: string
                 type: object
               nodeName:
@@ -139,9 +141,11 @@ spec:
                   uri:
                     description: "URI represents the file address with different storages,
                       e.g.:\n\t - oss://<bucket>.<endpoint>/<path-to-your-file>\n\t
-                      - localhost://<path-to-your-file>\n\t - remote://<node-name>@<path-to-your-file>\nNote:
-                      if it's a folder, all the files under the folder will be considered,\notherwise,
-                      only one file will be replicated."
+                      - localhost://<path-to-your-file>\n\t - remote://<node-name>@<path-to-your-file>\nLocalhost
+                      means the local host path, remote means the host path of the
+                      provided node.\nNote: if it's a folder, all the files under
+                      the folder will be considered,\notherwise, only one file will
+                      be replicated."
                     type: string
                 type: object
             required:

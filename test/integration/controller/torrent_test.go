@@ -24,6 +24,7 @@ import (
 	"github.com/onsi/gomega"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
+	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	api "github.com/inftyai/manta/api/v1alpha1"
@@ -71,8 +72,8 @@ var _ = ginkgo.Describe("Torrent controller test", func() {
 					update.updateFunc(obj)
 				}
 				newObj := &api.Torrent{}
-				gomega.Expect(k8sClient.Get(ctx, types.NamespacedName{Name: obj.Name}, newObj)).To(gomega.Succeed())
 				if update.checkFunc != nil {
+					gomega.Expect(k8sClient.Get(ctx, types.NamespacedName{Name: obj.Name}, newObj)).To(gomega.Succeed())
 					update.checkFunc(ctx, k8sClient, newObj)
 				}
 			}
@@ -83,12 +84,23 @@ var _ = ginkgo.Describe("Torrent controller test", func() {
 				return k8sClient.Create(ctx, nodeTracker)
 			},
 			makeTorrent: func() *api.Torrent {
-				return wrapper.MakeTorrent("qwen2-7b").Hub("Huggingface", "Qwen/Qwen2-7B-Instruct", "").Obj()
+				return wrapper.MakeTorrent("qwen2-7b").Preheat(false).Hub("Huggingface", "Qwen/Qwen2-7B-Instruct", "").Obj()
 			},
 			updates: []*update{
 				{
 					updateFunc: func(torrent *api.Torrent) {
+						// Preheat: false
 						gomega.Expect(k8sClient.Create(ctx, torrent)).To(gomega.Succeed())
+					},
+					checkFunc: func(ctx context.Context, k8sClient client.Client, torrent *api.Torrent) {
+						gomega.Expect(len(torrent.Status.Conditions)).To(gomega.Equal(0))
+						validation.ValidateReplicationsNumberEqualTo(ctx, k8sClient, torrent, 0)
+					},
+				},
+				{
+					updateFunc: func(torrent *api.Torrent) {
+						torrent.Spec.Preheat = ptr.To[bool](true)
+						gomega.Expect(k8sClient.Update(ctx, torrent)).To(gomega.Succeed())
 					},
 					checkFunc: func(ctx context.Context, k8sClient client.Client, torrent *api.Torrent) {
 						validation.ValidateTorrentStatusEqualTo(ctx, k8sClient, torrent, api.PendingConditionType, "Pending", metav1.ConditionTrue, nil)
@@ -121,7 +133,7 @@ var _ = ginkgo.Describe("Torrent controller test", func() {
 				return k8sClient.Create(ctx, nodeTracker)
 			},
 			makeTorrent: func() *api.Torrent {
-				return wrapper.MakeTorrent("qwen2-7b-gguf").Hub("Huggingface", "Qwen/Qwen2-0.5B-Instruct-GGUF", "qwen2-0_5b-instruct-q5_k_m.gguf").Obj()
+				return wrapper.MakeTorrent("qwen2-7b-gguf").Preheat(true).Hub("Huggingface", "Qwen/Qwen2-0.5B-Instruct-GGUF", "qwen2-0_5b-instruct-q5_k_m.gguf").Obj()
 			},
 			updates: []*update{
 				{
@@ -159,7 +171,7 @@ var _ = ginkgo.Describe("Torrent controller test", func() {
 				return k8sClient.Create(ctx, nodeTracker)
 			},
 			makeTorrent: func() *api.Torrent {
-				return wrapper.MakeTorrent("qwen2-7b").Replicas(3).Hub("Huggingface", "Qwen/Qwen2-7B-Instruct", "").Obj()
+				return wrapper.MakeTorrent("qwen2-7b").Preheat(true).Replicas(3).Hub("Huggingface", "Qwen/Qwen2-7B-Instruct", "").Obj()
 			},
 			updates: []*update{
 				{
@@ -203,7 +215,7 @@ var _ = ginkgo.Describe("Torrent controller test", func() {
 				return nil
 			},
 			makeTorrent: func() *api.Torrent {
-				return wrapper.MakeTorrent("qwen2-7b").Replicas(3).Hub("Huggingface", "Qwen/Qwen2-7B-Instruct", "").Obj()
+				return wrapper.MakeTorrent("qwen2-7b").Preheat(true).Replicas(3).Hub("Huggingface", "Qwen/Qwen2-7B-Instruct", "").Obj()
 			},
 			updates: []*update{
 				{
@@ -247,7 +259,7 @@ var _ = ginkgo.Describe("Torrent controller test", func() {
 				return nil
 			},
 			makeTorrent: func() *api.Torrent {
-				return wrapper.MakeTorrent("qwen2-7b").Replicas(1).NodeSelector("zone", "zone1").Hub("Huggingface", "Qwen/Qwen2-7B-Instruct", "").Obj()
+				return wrapper.MakeTorrent("qwen2-7b").Preheat(true).Replicas(1).NodeSelector("zone", "zone1").Hub("Huggingface", "Qwen/Qwen2-7B-Instruct", "").Obj()
 			},
 			updates: []*update{
 				{
@@ -291,7 +303,7 @@ var _ = ginkgo.Describe("Torrent controller test", func() {
 				return nil
 			},
 			makeTorrent: func() *api.Torrent {
-				return wrapper.MakeTorrent("qwen2-7b").Replicas(1).Hub("Huggingface", "Qwen/Qwen2-7B-Instruct", "").Obj()
+				return wrapper.MakeTorrent("qwen2-7b").Preheat(true).Replicas(1).Hub("Huggingface", "Qwen/Qwen2-7B-Instruct", "").Obj()
 			},
 			updates: []*update{
 				{
@@ -335,7 +347,7 @@ var _ = ginkgo.Describe("Torrent controller test", func() {
 				return nil
 			},
 			makeTorrent: func() *api.Torrent {
-				return wrapper.MakeTorrent("qwen2-7b-gguf").Hub("Huggingface", "Qwen/Qwen2-0.5B-Instruct-GGUF", "qwen2-0_5b-instruct-q5_k_m.gguf").Obj()
+				return wrapper.MakeTorrent("qwen2-7b-gguf").Preheat(true).Hub("Huggingface", "Qwen/Qwen2-0.5B-Instruct-GGUF", "qwen2-0_5b-instruct-q5_k_m.gguf").Obj()
 			},
 			updates: []*update{
 				{
@@ -375,6 +387,7 @@ var _ = ginkgo.Describe("Torrent controller test", func() {
 			},
 			makeTorrent: func() *api.Torrent {
 				return wrapper.MakeTorrent("qwen2-7b").
+					Preheat(true).
 					Hub("Huggingface", "Qwen/Qwen2-7B-Instruct", "").
 					ReclaimPolicy(api.DeleteReclaimPolicy).
 					Obj()
@@ -433,7 +446,7 @@ var _ = ginkgo.Describe("Torrent controller test", func() {
 				return k8sClient.Create(ctx, nodeTracker)
 			},
 			makeTorrent: func() *api.Torrent {
-				return wrapper.MakeTorrent("qwen2-7b-gguf").Hub("Huggingface", "Qwen/Qwen2-0.5B-Instruct-GGUF", "qwen2-0_5b-instruct-q5_k_m.gguf").Obj()
+				return wrapper.MakeTorrent("qwen2-7b-gguf").Preheat(true).Hub("Huggingface", "Qwen/Qwen2-0.5B-Instruct-GGUF", "qwen2-0_5b-instruct-q5_k_m.gguf").Obj()
 			},
 			updates: []*update{
 				{
@@ -466,7 +479,7 @@ var _ = ginkgo.Describe("Torrent controller test", func() {
 				{
 					updateFunc: func(torrent *api.Torrent) {
 						// Recreate the same model torrent.
-						newTorrent := wrapper.MakeTorrent("qwen2-7b-gguf-2").Hub("Huggingface", "Qwen/Qwen2-0.5B-Instruct-GGUF", "qwen2-0_5b-instruct-q5_k_m.gguf").Obj()
+						newTorrent := wrapper.MakeTorrent("qwen2-7b-gguf-2").Preheat(true).Hub("Huggingface", "Qwen/Qwen2-0.5B-Instruct-GGUF", "qwen2-0_5b-instruct-q5_k_m.gguf").Obj()
 						gomega.Expect(k8sClient.Create(ctx, newTorrent)).To(gomega.Succeed())
 					},
 					checkFunc: func(ctx context.Context, k8sClient client.Client, torrent *api.Torrent) {
@@ -483,7 +496,7 @@ var _ = ginkgo.Describe("Torrent controller test", func() {
 				return k8sClient.Create(ctx, nodeTracker)
 			},
 			makeTorrent: func() *api.Torrent {
-				return wrapper.MakeTorrent("qwen2-7b-gguf").Hub("Huggingface", "Qwen/Qwen2-0.5B-Instruct-GGUF", "qwen2-0_5b-instruct-q5_k_m.gguf").NodeSelector("zone", "zone1").Obj()
+				return wrapper.MakeTorrent("qwen2-7b-gguf").Preheat(true).Hub("Huggingface", "Qwen/Qwen2-0.5B-Instruct-GGUF", "qwen2-0_5b-instruct-q5_k_m.gguf").NodeSelector("zone", "zone1").Obj()
 			},
 			updates: []*update{
 				{
@@ -495,6 +508,37 @@ var _ = ginkgo.Describe("Torrent controller test", func() {
 						time.Sleep(3 * time.Second)
 						validation.ValidateTorrentStatusEqualTo(ctx, k8sClient, torrent, api.PendingConditionType, "Pending", metav1.ConditionTrue, nil)
 						validation.ValidateReplicationsNumberEqualTo(ctx, k8sClient, torrent, 0)
+					},
+				},
+			},
+		}),
+		ginkgo.Entry("Torrent with ttl is zero", &testValidatingCase{
+			precondition: func() error {
+				nodeTracker := wrapper.MakeNodeTracker("node1").Obj()
+				return k8sClient.Create(ctx, nodeTracker)
+			},
+			makeTorrent: func() *api.Torrent {
+				return wrapper.MakeTorrent("qwen2-7b").Preheat(true).TTL(0).Hub("Huggingface", "Qwen/Qwen2-7B-Instruct", "").Obj()
+			},
+			updates: []*update{
+				{
+					updateFunc: func(torrent *api.Torrent) {
+						gomega.Expect(k8sClient.Create(ctx, torrent)).To(gomega.Succeed())
+					},
+				},
+				{
+					updateFunc: func(torrent *api.Torrent) {
+						util.UpdateReplicationsCondition(ctx, k8sClient, torrent, api.ReplicateConditionType)
+					},
+					checkFunc: func(ctx context.Context, k8sClient client.Client, torrent *api.Torrent) {
+						validation.ValidateTorrentStatusEqualTo(ctx, k8sClient, torrent, api.ReplicateConditionType, "Replicating", metav1.ConditionTrue, nil)
+					},
+				},
+				{
+					updateFunc: func(torrent *api.Torrent) {
+						util.UpdateReplicationsCondition(ctx, k8sClient, torrent, api.ReadyConditionType)
+						// Once ready, Torrent will be deleted immediately.
+						validation.ValidateTorrentNotExist(ctx, k8sClient, torrent)
 					},
 				},
 			},

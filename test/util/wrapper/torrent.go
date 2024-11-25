@@ -17,6 +17,8 @@ limitations under the License.
 package wrapper
 
 import (
+	"time"
+
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	api "github.com/inftyai/manta/api/v1alpha1"
@@ -69,5 +71,16 @@ func (w *TorrentWrapper) NodeSelector(k, v string) *TorrentWrapper {
 		w.Spec.NodeSelector = map[string]string{}
 	}
 	w.Spec.NodeSelector[k] = v
+	return w
+}
+
+func (w *TorrentWrapper) Preheat(yesOrNo bool) *TorrentWrapper {
+	w.Spec.Preheat = &yesOrNo
+	return w
+}
+
+func (w *TorrentWrapper) TTL(number int32) *TorrentWrapper {
+	ttl := time.Duration(number) * time.Second
+	w.Spec.TTLSecondsAfterReady = &ttl
 	return w
 }

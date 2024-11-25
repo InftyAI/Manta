@@ -33,6 +33,7 @@ type Target struct {
 	// 	 - oss://<bucket>.<endpoint>/<path-to-your-file>
 	// 	 - localhost://<path-to-your-file>
 	// 	 - remote://<node-name>@<path-to-your-file>
+	// Localhost means the local host path, remote means the host path of the provided node.
 	// Note: if it's a folder, all the files under the folder will be considered,
 	// otherwise, only one file will be replicated.
 	URI *string `json:"uri,omitempty"`
@@ -80,6 +81,7 @@ type ReplicationStatus struct {
 //+kubebuilder:resource:scope=Cluster
 //+kubebuilder:printcolumn:name="node",type=string,JSONPath=".spec.nodeName"
 //+kubebuilder:printcolumn:name="phase",type=string,JSONPath=".status.phase"
+//+kubebuilder:printcolumn:name="Age",type=date,JSONPath=".metadata.creationTimestamp"
 
 // Replication is the Schema for the replications API
 type Replication struct {

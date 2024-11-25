@@ -19,6 +19,7 @@ package controller
 import (
 	"context"
 	"fmt"
+	"time"
 
 	"k8s.io/apimachinery/pkg/api/errors"
 	apimeta "k8s.io/apimachinery/pkg/api/meta"
@@ -74,6 +75,12 @@ func (r *TorrentReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ct
 
 	logger.Info("reconcile Torrent")
 
+	// Noe need to handle Torrent at this point just because we don't want to
+	// download the files.
+	if torrent.Spec.Preheat != nil && !*torrent.Spec.Preheat {
+		return ctrl.Result{}, nil
+	}
+
 	// TODO: delete torrent at anytime.
 	if torrentReady(torrent) && torrentDeleting(torrent) {
 		logger.Info("start to handle torrent deletion")
@@ -102,6 +109,7 @@ func (r *TorrentReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ct
 			logger.Error(err, "failed to handle creation")
 			return ctrl.Result{}, err
 		}
+		return ctrl.Result{}, nil
 	}
 
 	nodeTrackers := &api.NodeTrackerList{}
@@ -196,6 +204,15 @@ func (r *TorrentReconciler) handleDeletion(ctx context.Context, torrent *api.Tor
 }
 
 func (r *TorrentReconciler) handleReady(ctx context.Context, torrent *api.Torrent) error {
+	// TODO: once ttl supports other values than 0, we need to refactor here.
+	if torrent.Spec.TTLSecondsAfterReady != nil && *torrent.Spec.TTLSecondsAfterReady == time.Duration(0) {
+		// Corresponding Replications will be deleted as well.
+		if err := r.Client.Delete(ctx, torrent); err != nil {
+			return err
+		}
+		return nil
+	}
+
 	replications, err := r.replications(ctx, torrent)
 	if err != nil {
 		return err
@@ -299,6 +316,7 @@ func (r *TorrentReconciler) SetupWithManager(mgr ctrl.Manager) error {
 }
 
 func setTorrentCondition(torrent *api.Torrent, replications []api.Replication) (changed bool) {
+	// Set to Pending condition.
 	if torrent.Status.Repo == nil {
 		condition := metav1.Condition{
 			Type:    api.PendingConditionType,
@@ -309,6 +327,7 @@ func setTorrentCondition(torrent *api.Torrent, replications []api.Replication) (
 		return setTorrentConditionTo(torrent, condition)
 	}
 
+	// Set to Reclaiming condition.
 	if torrentReady(torrent) && torrentDeleting(torrent) {
 		condition := metav1.Condition{
 			Type:    api.ReclaimingConditionType,
@@ -323,6 +342,7 @@ func setTorrentCondition(torrent *api.Torrent, replications []api.Replication) (
 		return false
 	}
 
+	// Set to Ready condition.
 	if apimeta.IsStatusConditionTrue(torrent.Status.Conditions, api.ReplicateConditionType) && replicationsReady(replications) {
 		condition := metav1.Condition{
 			Type:    api.ReadyConditionType,
@@ -333,6 +353,7 @@ func setTorrentCondition(torrent *api.Torrent, replications []api.Replication) (
 		return setTorrentConditionTo(torrent, condition)
 	}
 
+	// Set to Replicating condition.
 	if torrentDownloading(replications) {
 		condition := metav1.Condition{
 			Type:    api.ReplicateConditionType,

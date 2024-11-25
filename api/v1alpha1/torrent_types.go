@@ -17,6 +17,8 @@ limitations under the License.
 package v1alpha1
 
 import (
+	"time"
+
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
@@ -65,6 +67,12 @@ const (
 
 // TorrentSpec defines the desired state of Torrent
 type TorrentSpec struct {
+	// Preheat represents whether we should preload the model.
+	// Preheat can only be transitioned from false to true, not the other way around.
+	// +kubebuilder:default=true
+	// +optional
+	Preheat *bool `json:"preheat,omitempty"`
+
 	// Hub represents the model registry for model downloads.
 	// Hub and URI are exclusive.
 	// +optional
@@ -88,6 +96,11 @@ type TorrentSpec struct {
 	// +kubebuilder:validation:Enum={Retain,Delete}
 	// +optional
 	ReclaimPolicy *ReclaimPolicy `json:"reclaimPolicy,omitempty"`
+	// TTLSecondsAfterReady represents the waiting time to delete the Torrent once Ready.
+	// Default to nil indicates Torrent will not be deleted.
+	// TODO: We only support nil and 0 right now.
+	// +optional
+	TTLSecondsAfterReady *time.Duration `json:"ttlSecondsAfterReady,omitempty"`
 	// NodeSelector represents the node constraints to download the chunks.
 	// It can be used to download the model to a specified node for preheating.
 	// +optional

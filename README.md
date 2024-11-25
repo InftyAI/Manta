@@ -27,7 +27,7 @@ _Name Story: the inspiration of the name `Manta` is coming from Dota2, called [M
 
 ## Features Overview
 
-- **Model Hub Support**: Models could be downloaded directly from model hubs (Huggingface etc.) or object storages, no other efforts.
+- **Model Hub Support**: Models could be downloaded directly from model hubs (Huggingface etc.) or object storages, no other effort.
 - **Model Preheat**: Models could be preloaded to clusters, or specified nodes to accelerate the model serving.
 - **Model Cache**: Models will be cached as chunks after downloading for faster model loading.
 - **Model Lifecycle Management**: Model lifecycle is managed automatically with different strategies, like `Retain` or `Delete`.
@@ -97,9 +97,11 @@ More details refer to the [APIs](https://github.com/InftyAI/Manta/blob/main/api/
 
 ## Roadmap
 
+In the long term, we hope to make Manta **an unified cache system within MLOps**.
+
 - Preloading datasets from model hubs
 - RDMA support for faster model loading
-- More integrations with serving projects
+- More integrations with MLOps system, including training and serving
 
 ## Community
 

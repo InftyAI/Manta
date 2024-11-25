@@ -62,6 +62,7 @@ func (r *ReplicationReconciler) Reconcile(ctx context.Context, req ctrl.Request)
 
 	logger.Info("reconcile Replication", "Replication", klog.KObj(replication))
 
+	// Leave the left reconciliation to agent controller.
 	if setReplicationCondition(replication) {
 		return ctrl.Result{}, r.Status().Update(ctx, replication)
 	}
@@ -70,7 +71,6 @@ func (r *ReplicationReconciler) Reconcile(ctx context.Context, req ctrl.Request)
 }
 
 // Only watch for create events.
-
 func (r *ReplicationReconciler) Create(e event.CreateEvent) bool {
 	return true
 }
