@@ -81,6 +81,7 @@ type ReplicationStatus struct {
 //+kubebuilder:resource:scope=Cluster
 //+kubebuilder:printcolumn:name="node",type=string,JSONPath=".spec.nodeName"
 //+kubebuilder:printcolumn:name="phase",type=string,JSONPath=".status.phase"
+//+kubebuilder:printcolumn:name="Age",type=date,JSONPath=".metadata.creationTimestamp"
 
 // Replication is the Schema for the replications API
 type Replication struct {

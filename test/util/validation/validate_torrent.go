@@ -149,15 +149,17 @@ func ValidateReplicationsNumberEqualTo(ctx context.Context, k8sClient client.Cli
 	}, util.Timeout, util.Interval).Should(gomega.BeTrue())
 }
 
-func ValidateNodeTrackerChunkNumberEqualTo(ctx context.Context, k8sClient client.Client, nodeTrackerName string, number int) {
+func ValidateNodeTrackerChunkNumberEqualTo(ctx context.Context, k8sClient client.Client, number int, nodeTrackerNames ...string) {
 	gomega.Eventually(func() error {
-		nt := &api.NodeTracker{}
-		if err := k8sClient.Get(ctx, types.NamespacedName{Name: nodeTrackerName}, nt); err != nil {
-			return err
-		}
-		if len(nt.Spec.Chunks) != number {
-			return fmt.Errorf("unexpected chunk number, want %d, got %d", number, len(nt.Spec.Chunks))
+		for _, name := range nodeTrackerNames {
+			nt := &api.NodeTracker{}
+			if err := k8sClient.Get(ctx, types.NamespacedName{Name: name}, nt); err != nil {
+				return err
+			}
+			if len(nt.Spec.Chunks) != number {
+				return fmt.Errorf("unexpected chunk number, want %d, got %d", number, len(nt.Spec.Chunks))
+			}
 		}
 		return nil
-	}, util.Timeout*3, util.Interval).Should(gomega.Succeed())
+	}, util.Timeout, util.Interval).Should(gomega.Succeed())
 }

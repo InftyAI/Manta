@@ -379,7 +379,7 @@ func buildSyncReplication(torrent *api.Torrent, chunk framework.ChunkInfo, sourc
 func buildDeletionReplication(torrent *api.Torrent, chunk framework.ChunkInfo, nodeName string) *api.Replication {
 	repoName := hubRepoName(torrent.Spec.Hub)
 	generatedName := util.GenerateName(nodeName)
-	name := chunk.Name + "--" + generatedName
+	name := chunk.Name + "--" + generatedName + "--" + "d"
 
 	return &api.Replication{
 		TypeMeta: v1.TypeMeta{
