@@ -435,7 +435,7 @@ var _ = ginkgo.Describe("Torrent controller test", func() {
 						util.UpdateReplicationsCondition(ctx, k8sClient, torrent, api.ReadyConditionType)
 					},
 					checkFunc: func(ctx context.Context, k8sClient client.Client, torrent *api.Torrent) {
-						validation.ValidateTorrentNotExist(ctx, k8sClient, torrent)
+						validation.ValidateTorrentNotExist(ctx, k8sClient, torrent.Name, nil)
 					},
 				},
 			},
@@ -538,7 +538,7 @@ var _ = ginkgo.Describe("Torrent controller test", func() {
 					updateFunc: func(torrent *api.Torrent) {
 						util.UpdateReplicationsCondition(ctx, k8sClient, torrent, api.ReadyConditionType)
 						// Once ready, Torrent will be deleted immediately.
-						validation.ValidateTorrentNotExist(ctx, k8sClient, torrent)
+						validation.ValidateTorrentNotExist(ctx, k8sClient, torrent.Name, nil)
 					},
 				},
 			},

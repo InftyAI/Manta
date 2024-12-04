@@ -20,9 +20,6 @@ import (
 	"flag"
 	"os"
 
-	// Import all Kubernetes client auth plugins (e.g. Azure, GCP, OIDC, etc.)
-	// to ensure that exec-entrypoint and run can make use of them.
-
 	_ "k8s.io/client-go/plugin/pkg/client/auth"
 
 	"k8s.io/apimachinery/pkg/runtime"
@@ -106,7 +103,6 @@ func main() {
 	// will block until the cert is ready before setting up the controllers.
 	// Controllers who register after manager starts will start directly.
 	go setupControllers(mgr, certsReady)
-
 	//+kubebuilder:scaffold:builder
 
 	if err := mgr.AddHealthzCheck("healthz", healthz.Ping); err != nil {
@@ -161,6 +157,13 @@ func setupControllers(mgr ctrl.Manager, certsReady chan struct{}) {
 		setupLog.Error(err, "unable to create controller", "controller", "Torrent")
 		os.Exit(1)
 	}
+	if err := controller.NewPodReconciler(
+		mgr.GetClient(),
+		mgr.GetScheme(),
+	).SetupWithManager(mgr); err != nil {
+		setupLog.Error(err, "unable to create controller", "controller", "Pod")
+		os.Exit(1)
+	}
 
 	if os.Getenv("ENABLE_WEBHOOKS") != "false" {
 		if err := webhook.SetupTorrentWebhook(mgr); err != nil {
@@ -169,6 +172,10 @@ func setupControllers(mgr ctrl.Manager, certsReady chan struct{}) {
 		}
 		if err := webhook.SetupReplicationWebhook(mgr); err != nil {
 			setupLog.Error(err, "unable to create webhook", "webhook", "Replication")
+			os.Exit(1)
+		}
+		if err := webhook.SetupPodWebhook(mgr); err != nil {
+			setupLog.Error(err, "unable to create webhook", "webhook", "Pod")
 			os.Exit(1)
 		}
 	}

@@ -32,6 +32,7 @@ import (
 	//+kubebuilder:scaffold:imports
 
 	admissionv1 "k8s.io/api/admission/v1"
+	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apiextensions-apiserver/pkg/client/clientset/clientset/scheme"
 	"k8s.io/client-go/rest"
 	ctrl "sigs.k8s.io/controller-runtime"
@@ -67,6 +68,11 @@ var _ = BeforeSuite(func() {
 	ctx, cancel = context.WithCancel(context.TODO())
 
 	By("bootstrapping test environment")
+	webhookPaths := []string{}
+	webhookPaths = append(webhookPaths, filepath.Join("..", "..", "..", "config", "webhook", "kustomization.yaml"))
+	webhookPaths = append(webhookPaths, filepath.Join("..", "..", "..", "config", "webhook", "kustomizeconfig.yaml"))
+	webhookPaths = append(webhookPaths, filepath.Join("..", "..", "..", "config", "webhook", "manifests.yaml"))
+	webhookPaths = append(webhookPaths, filepath.Join("..", "..", "..", "config", "webhook", "service.yaml"))
 
 	testEnv = &envtest.Environment{
 		CRDDirectoryPaths:     []string{filepath.Join("..", "..", "..", "config", "crd", "bases")},
@@ -81,16 +87,19 @@ var _ = BeforeSuite(func() {
 			fmt.Sprintf("1.30.0-%s-%s", runtime.GOOS, runtime.GOARCH)),
 
 		WebhookInstallOptions: envtest.WebhookInstallOptions{
-			Paths: []string{filepath.Join("..", "..", "..", "config", "webhook")},
+			Paths: webhookPaths,
 		},
 	}
 
 	var err error
 	// cfg is defined in this file globally.
 	cfg, err = testEnv.Start()
+	fmt.Println(err)
 	Expect(err).NotTo(HaveOccurred())
 	Expect(cfg).NotTo(BeNil())
 
+	err = corev1.AddToScheme(scheme.Scheme)
+	Expect(err).NotTo(HaveOccurred())
 	err = api.AddToScheme(scheme.Scheme)
 	Expect(err).NotTo(HaveOccurred())
 	err = admissionv1.AddToScheme(scheme.Scheme)
@@ -119,6 +128,8 @@ var _ = BeforeSuite(func() {
 	err = apiwebhook.SetupTorrentWebhook(mgr)
 	Expect(err).NotTo(HaveOccurred())
 	err = apiwebhook.SetupReplicationWebhook(mgr)
+	Expect(err).NotTo(HaveOccurred())
+	err = apiwebhook.SetupPodWebhook(mgr)
 	Expect(err).NotTo(HaveOccurred())
 
 	//+kubebuilder:scaffold:webhook

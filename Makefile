@@ -63,9 +63,12 @@ IMAGE_NAME ?= manta
 IMAGE_REPO := $(IMAGE_REGISTRY)/$(IMAGE_NAME)
 AGENT_IMAGE_NAME ?= manta-agent
 AGENT_IMAGE_REPO := $(IMAGE_REGISTRY)/$(AGENT_IMAGE_NAME)
+PREHEAT_IMAGE_NAME ?= manta-preheat
+PREHEAT_IMAGE_REPO := $(IMAGE_REGISTRY)/$(PREHEAT_IMAGE_NAME)
 GIT_TAG ?= $(shell git describe --tags --dirty --always)
 IMG ?= $(IMAGE_REPO):$(GIT_TAG)
 AGENT_IMG ?= $(AGENT_IMAGE_REPO):$(GIT_TAG)
+PREHEAT_IMG ?= $(PREHEAT_IMAGE_REPO):$(GIT_TAG)
 BUILDER_IMAGE ?= golang:$(GO_VERSION)
 KIND_CLUSTER_NAME ?= kind
 
@@ -189,6 +192,19 @@ agent-image-load: IMAGE_BUILD_EXTRA_OPTS=--load
 agent-image-load: agent-image-build
 agent-image-push: IMAGE_BUILD_EXTRA_OPTS=--push
 agent-image-push: agent-image-build
+
+.PHONY: preheat-image-build
+preheat-image-build:
+	$(IMAGE_BUILD_CMD) -t $(PREHEAT_IMG) \
+		-f Dockerfile.preheat \
+		--build-arg BASE_IMAGE=$(BASE_IMAGE) \
+		--build-arg BUILDER_IMAGE=$(BUILDER_IMAGE) \
+		--build-arg CGO_ENABLED=$(CGO_ENABLED) \
+		$(IMAGE_BUILD_EXTRA_OPTS) ./
+preheat-image-load: IMAGE_BUILD_EXTRA_OPTS=--load
+preheat-image-load: preheat-image-build
+preheat-image-push: IMAGE_BUILD_EXTRA_OPTS=--push
+preheat-image-push: preheat-image-build
 
 KIND = $(shell pwd)/bin/kind
 .PHONY: kind
