@@ -22,6 +22,7 @@ import (
 	"os"
 
 	"github.com/onsi/gomega"
+	corev1 "k8s.io/api/core/v1"
 	apimeta "k8s.io/apimachinery/pkg/api/meta"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
@@ -83,7 +84,15 @@ func UpdateReplicationsCondition(ctx context.Context, k8sClient client.Client, t
 
 		return nil
 	}, Timeout, Interval).Should(gomega.Succeed())
+}
 
+func PodScheduled(ctx context.Context, k8sClient client.Client, pod *corev1.Pod) {
+	gomega.Eventually(func() bool {
+		if err := k8sClient.Get(ctx, types.NamespacedName{Name: pod.Name, Namespace: pod.Namespace}, pod); err != nil {
+			return false
+		}
+		return pod.Spec.NodeName != ""
+	}, Timeout, Interval).Should(gomega.BeTrue())
 }
 
 func TorrentChunkNumber(torrent *api.Torrent) (number int) {

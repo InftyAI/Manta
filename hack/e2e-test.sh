@@ -24,7 +24,8 @@ function cleanup {
     then
         $KIND delete cluster --name $KIND_CLUSTER_NAME
     fi
-    (cd $CWD/config/manager && $KUSTOMIZE edit set image controller=inftyai/llmaz:main)
+    (cd $CWD/config/manager && $KUSTOMIZE edit set image controller=inftyai/manta:main)
+    (cd $CWD/agent/config/manager && $KUSTOMIZE edit set image controller=inftyai/manta-agent:main)
 }
 function startup {
     if [ $USE_EXISTING_CLUSTER == 'false' ]
@@ -44,8 +45,8 @@ function deploy {
     # agent
 	cd $CWD/agent/config/manager && $KUSTOMIZE edit set image controller=$AGENT_IMAGE_TAG
     $KUSTOMIZE build $CWD/agent/config | $KUBECTL apply --server-side -f -
-
 }
+
 trap cleanup EXIT
 startup
 kind_load

@@ -25,6 +25,7 @@ import (
 const (
 	TorrentNameLabelKey        = "manta.io/torrent-name"
 	TorrentProtectionFinalizer = "manta.io/torrent-protect"
+	ParentPodNameAnnoKey       = "manta.io/parent-pod-name"
 
 	HUGGINGFACE_MODEL_HUB = "Huggingface"
 )

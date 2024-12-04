@@ -106,13 +106,25 @@ func ValidateTorrentStatusEqualTo(ctx context.Context, k8sClient client.Client, 
 	}, timeout, interval).Should(gomega.Succeed())
 }
 
-func ValidateTorrentNotExist(ctx context.Context, k8sClient client.Client, torrent *api.Torrent) {
+func ValidateTorrentNotExist(ctx context.Context, k8sClient client.Client, torrentName string, option *ValidateOptions) {
+	timeout := util.Timeout
+	interval := util.Interval
+
+	if option != nil {
+		if option.Timeout != time.Duration(0) {
+			timeout = option.Timeout
+		}
+		if option.Interval != time.Duration(0) {
+			interval = option.Interval
+		}
+	}
+	torrent := &api.Torrent{}
 	gomega.Eventually(func() error {
-		if err := k8sClient.Get(ctx, types.NamespacedName{Name: torrent.Name}, torrent); err != nil && apierrors.IsNotFound(err) {
+		if err := k8sClient.Get(ctx, types.NamespacedName{Name: torrentName}, torrent); err != nil && apierrors.IsNotFound(err) {
 			return nil
 		}
-		return fmt.Errorf("want not exist error")
-	}, util.Timeout, util.Interval).Should(gomega.Succeed())
+		return fmt.Errorf("want Torrent not exist error")
+	}, timeout, interval).Should(gomega.Succeed())
 }
 
 func ValidateAllReplicationsNodeNameEqualTo(ctx context.Context, k8sClient client.Client, torrent *api.Torrent, nodeName string) {

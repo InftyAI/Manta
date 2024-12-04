@@ -18,10 +18,14 @@ package controller
 
 import (
 	"context"
+	"errors"
 	"fmt"
+	"net/http"
+	"strings"
 	"time"
 
-	"k8s.io/apimachinery/pkg/api/errors"
+	corev1 "k8s.io/api/core/v1"
+	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	apimeta "k8s.io/apimachinery/pkg/api/meta"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/labels"
@@ -39,7 +43,9 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/log"
 	"sigs.k8s.io/controller-runtime/pkg/predicate"
 
+	cons "github.com/inftyai/manta/api"
 	api "github.com/inftyai/manta/api/v1alpha1"
+	defaults "github.com/inftyai/manta/pkg"
 	"github.com/inftyai/manta/pkg/dispatcher"
 	"github.com/inftyai/manta/pkg/util"
 )
@@ -176,7 +182,7 @@ func (r *TorrentReconciler) handleDeletion(ctx context.Context, torrent *api.Tor
 		}
 
 		for _, rep := range replications {
-			if err := r.Client.Create(ctx, rep); err != nil && !errors.IsAlreadyExists(err) {
+			if err := r.Client.Create(ctx, rep); err != nil && !apierrors.IsAlreadyExists(err) {
 				return err
 			}
 		}
@@ -204,6 +210,13 @@ func (r *TorrentReconciler) handleDeletion(ctx context.Context, torrent *api.Tor
 }
 
 func (r *TorrentReconciler) handleReady(ctx context.Context, torrent *api.Torrent) error {
+	// request the callback to notify the pod, model download/sync is finished.
+	if torrent.Annotations[api.ParentPodNameAnnoKey] != "" {
+		if err := callback(ctx, r.Client, torrent); err != nil {
+			return err
+		}
+	}
+
 	// TODO: once ttl supports other values than 0, we need to refactor here.
 	if torrent.Spec.TTLSecondsAfterReady != nil && *torrent.Spec.TTLSecondsAfterReady == time.Duration(0) {
 		// Corresponding Replications will be deleted as well.
@@ -249,7 +262,7 @@ func (r *TorrentReconciler) handleDispatcher(ctx context.Context, torrent *api.T
 
 	for _, rep := range replications {
 		// If Replication is duplicated, just ignore here.
-		if err := r.Client.Create(ctx, rep); err != nil && !errors.IsAlreadyExists(err) {
+		if err := r.Client.Create(ctx, rep); err != nil && !apierrors.IsAlreadyExists(err) {
 			return false, err
 		}
 	}
@@ -442,4 +455,47 @@ func constructRepoStatus(torrent *api.Torrent, objects []*util.ObjectBody) {
 		}
 	}
 	torrent.Status.Repo = repo
+}
+
+func callback(ctx context.Context, cli client.Client, torrent *api.Torrent) error {
+	splits := strings.Split(torrent.Annotations[api.ParentPodNameAnnoKey], "/")
+	if len(splits) != 2 {
+		return errors.New("namespaced name is not right")
+	}
+
+	pod := corev1.Pod{}
+	if err := cli.Get(ctx, types.NamespacedName{Namespace: splits[0], Name: splits[1]}, &pod); err != nil {
+		return err
+	}
+
+	// Once invoked callback, no longer to call again.
+	for _, status := range pod.Status.InitContainerStatuses {
+		if status.Name == defaults.PREHEAT_CONTAINER_NAME {
+			if status.Ready {
+				return nil
+			}
+		}
+	}
+
+	url := fmt.Sprintf("http://%s:%s/preheated", pod.Status.PodIP, cons.HttpPort)
+
+	client := &http.Client{}
+	req, err := http.NewRequest("POST", url, nil)
+	if err != nil {
+		return err
+	}
+
+	resp, err := client.Do(req)
+	if err != nil {
+		return err
+	}
+	defer func() {
+		_ = resp.Body.Close()
+	}()
+
+	if resp.StatusCode != http.StatusOK {
+		return errors.New("status not right")
+	}
+
+	return nil
 }
