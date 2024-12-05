@@ -47,9 +47,9 @@ _Name Story: the inspiration of the name `Manta` is coming from Dota2, called [M
 
 Read the [Installation](./docs//installation.md) for guidance.
 
-### Preheat Models
+### Preheat Model
 
-A sample to preload the `Qwen/Qwen2.5-0.5B-Instruct` model:
+A sample to preload the `Qwen/Qwen2.5-0.5B-Instruct` model. Once preheated, no longer to fetch the models from cold start, but from the cache instead.
 
 ```yaml
 apiVersion: manta.io/v1alpha1
@@ -74,10 +74,31 @@ spec:
     name: Huggingface
     repoID: Qwen/Qwen2.5-0.5B-Instruct
   nodeSelector:
-    zone: zone-a
+    foo: bar
 ```
 
-### Delete Models
+### Use Model
+
+Once you have a Torrent, you can access the model simply from host path of `/mnt/models/. What you need to do is just set the Pod label like:
+
+```yaml
+metadata:
+  labels:
+    manta.io/torrent-name: "torrent-sample"
+```
+
+Note: you can make the Torrent `Standby` by setting the preheat to false (true by default), then preheating will process in runtime, which obviously wll slow down the model loading.
+
+```yaml
+apiVersion: manta.io/v1alpha1
+kind: Torrent
+metadata:
+  name: torrent-sample
+spec:
+  preheat: false
+```
+
+### Delete Model
 
 If you want to remove the model weights once `Torrent` is deleted, set the `ReclaimPolicy=Delete`, default to `Retain`:
 
