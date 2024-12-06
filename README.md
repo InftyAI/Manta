@@ -18,6 +18,8 @@ A lightweight P2P-based cache system for model distributions on Kubernetes.
 
 _Name Story: the inspiration of the name `Manta` is coming from Dota2, called [Manta Style](https://dota2.fandom.com/wiki/Manta_Style), which will create 2 images of your hero just like peers in the P2P network._
 
+**We're reframing the Manta to make it a general distributed cache system with POSIX promise**, the current capacities are still available with the latest v0.0.4 release. Let's see what will happen.
+
 
 ## Architecture
 
