@@ -1,0 +1,14 @@
+[package]
+name = "manta"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+fuser = "0.15.1"
+libc = "0.2.167"
+log = "0.4.22"
+
+[dependencies.rocksdb]
+version = "0.22.0"
+default-features = false
+features = ["lz4"]
