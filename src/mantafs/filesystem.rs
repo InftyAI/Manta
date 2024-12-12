@@ -1,28 +1,29 @@
 use log::{debug, warn};
 use std::ffi::OsStr;
 
-use fuser::{Filesystem, ReplyAttr, ReplyData, ReplyEntry, Request};
-use libc::{ENOENT, ENOSYS};
+use fuser::{Filesystem, KernelConfig, ReplyAttr, ReplyData, ReplyEntry, Request, FUSE_ROOT_ID};
+use libc::{c_int, ENOENT, ENOSYS};
+
+use crate::store::store::{BackendStore, StoreType};
 
 #[derive(Debug)]
 struct mantafs {
     root: String,
     cache_dir: String,
-    storage: String, // TODO: enum
 }
 
 impl mantafs {
     fn new(root: String, cache_dir: String, storage: String) -> Self {
-        Self {
-            root,
-            cache_dir,
-            storage,
-        }
+        Self { root, cache_dir }
     }
 }
 
 impl Filesystem for mantafs {
-    fn lookup(&mut self, _req: &Request<'_>, parent: u64, name: &OsStr, reply: ReplyEntry) {
+    fn init(&mut self, _req: &Request, _config: &mut KernelConfig) -> Result<(), c_int> {
+        let backend = BackendStore::new(StoreType::RocksDB);
+    }
+
+    fn lookup(&mut self, _req: &Request, parent: u64, name: &OsStr, reply: ReplyEntry) {
         warn!(
             "[Not Implemented] lookup(parent: {:#x?}, name {:?})",
             parent, name

@@ -7,6 +7,8 @@ edition = "2021"
 fuser = "0.15.1"
 libc = "0.2.167"
 log = "0.4.22"
+bincode = "2.0.0-rc.3"
+sea-orm = { version = "1.1.2", features = ["sqlx-sqlite", "runtime-tokio-native-tls"] }
 
 [dependencies.rocksdb]
 version = "0.22.0"
