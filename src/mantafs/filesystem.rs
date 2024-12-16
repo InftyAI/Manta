@@ -1,34 +1,55 @@
 use log::{debug, warn};
-use std::ffi::OsStr;
+use std::{ffi::OsStr, time::Duration};
 
 use fuser::{Filesystem, KernelConfig, ReplyAttr, ReplyData, ReplyEntry, Request, FUSE_ROOT_ID};
-use libc::{c_int, ENOENT, ENOSYS};
+use libc::{c_int, EIO, ENOENT, ENOSYS};
+use tokio::runtime::{self, Runtime};
 
-use crate::store::store::{BackendStore, StoreType};
+use crate::store::store::{Backend, StoreType};
 
-#[derive(Debug)]
+lazy_static::lazy_static! {
+    static ref RUNTIME: Runtime = runtime::Builder::new_current_thread().enable_all().build().unwrap();
+}
+
 struct mantafs {
-    root: String,
-    cache_dir: String,
+    backend: Backend,
 }
 
 impl mantafs {
-    fn new(root: String, cache_dir: String, storage: String) -> Self {
-        Self { root, cache_dir }
+    async fn new() -> Self {
+        let backend = Backend::new(StoreType::Sqlite).await;
+        Self { backend }
     }
 }
 
 impl Filesystem for mantafs {
     fn init(&mut self, _req: &Request, _config: &mut KernelConfig) -> Result<(), c_int> {
-        let backend = BackendStore::new(StoreType::RocksDB);
+        Ok(())
     }
 
     fn lookup(&mut self, _req: &Request, parent: u64, name: &OsStr, reply: ReplyEntry) {
-        warn!(
-            "[Not Implemented] lookup(parent: {:#x?}, name {:?})",
-            parent, name
-        );
-        reply.error(ENOENT);
+        match name.to_str() {
+            Some(value) => {
+                let result =
+                    runtime::Runtime::block_on(&RUNTIME, self.backend.lookup(parent, value));
+
+                // TODO: check access
+                match result {
+                    Ok(Some(inode)) => {
+                        reply.entry(&Duration::new(0, 0), &inode.convert_to_fileAttr(), 0);
+                    }
+                    Ok(None) => {
+                        reply.error(ENOENT);
+                    }
+                    Err(_err) => {
+                        reply.error(EIO);
+                    }
+                }
+            }
+            None => {
+                reply.error(ENOENT);
+            }
+        }
     }
 
     fn getattr(&mut self, _req: &Request<'_>, ino: u64, fh: Option<u64>, reply: ReplyAttr) {

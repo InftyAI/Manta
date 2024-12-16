@@ -1,8 +1,8 @@
-use std::{
-    collections::hash_map::DefaultHasher,
-    hash::{Hash, Hasher},
-    path,
-};
+use std::collections::hash_map::DefaultHasher;
+use std::hash::{Hash, Hasher};
+use std::time::{SystemTime, UNIX_EPOCH};
+
+use chrono::NaiveDateTime;
 
 pub fn gen_inode(id: &str) -> u64 {
     let mut hasher = DefaultHasher::new();
@@ -19,6 +19,12 @@ pub fn parse_path(protocol_path: &str) -> Result<(&str, &str, &str), &'static st
     let splits: Vec<&str> = paths[1].split(":").collect();
     let version = if splits.len() == 2 { splits[1] } else { "" };
     Ok((paths[0], splits[0], version))
+}
+
+// TODO: add tests.
+pub fn naive_to_system_time(naive: NaiveDateTime) -> SystemTime {
+    let timestamp = naive.and_utc().timestamp();
+    UNIX_EPOCH + std::time::Duration::from_secs(timestamp as u64)
 }
 
 #[cfg(test)]

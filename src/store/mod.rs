@@ -1,3 +1,2 @@
-pub mod error;
-pub mod rocksdb;
+pub mod sqlite;
 pub mod store;
